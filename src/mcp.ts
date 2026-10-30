@@ -1,5 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { describeError } from "./core/client.js";
 import * as dishes from "./core/dishes.js";
@@ -38,8 +41,18 @@ function tool<T>(run: (args: T) => Promise<unknown>) {
   };
 }
 
+/** The app icon, sent in serverInfo so clients can show it next to the connector. */
+function appIcons() {
+  try {
+    const png = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "app", "icon.png"));
+    return [{ src: `data:image/png;base64,${png.toString("base64")}`, mimeType: "image/png", sizes: ["256x256"] }];
+  } catch {
+    return undefined;
+  }
+}
+
 const server = new McpServer(
-  { name: "picnic", version: "0.1.0" },
+  { name: "picnic", title: "Picnic", version: "0.1.0", icons: appIcons() },
   {
     instructions: [
       "Zugriff auf das Picnic-Konto des Nutzers (Online-Supermarkt mit Lieferung).",
