@@ -107,14 +107,14 @@ Installer lokal bauen (landen in `release/`):
 npm run dist
 ```
 
-Einen Mac-Installer kann man nur auf einem Mac bauen. Das übernimmt der GitHub-Workflow: Ein Versions-Tag pushen, und GitHub baut die Windows- und Mac-Installer und hängt sie an ein Release.
+Einen Mac-Installer kann man nur auf einem Mac bauen. Das übernimmt der GitHub-Workflow: Version erhöhen (das legt auch den passenden Tag an) und pushen, dann baut GitHub die Windows- und Mac-Installer und hängt sie an ein Release.
 
 ```bash
-git tag v0.1.1
+npm version patch
 ```
 
 ```bash
-git push origin v0.1.1
+git push --follow-tags
 ```
 
 ### Aufbau
