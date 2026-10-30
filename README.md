@@ -38,7 +38,7 @@ Lade die passende Datei unter [Releases](../../releases) herunter:
 | Mac mit Apple-Chip (M1 bis M4) | `Desktop-Client-fuer-Picnic-x.y.z-arm64.dmg` |
 | Mac mit Intel-Chip | `Desktop-Client-fuer-Picnic-x.y.z-x64.dmg` |
 
-Bis Version 0.2.0 hieß die App „Picnic Desktop Client“. Nach dem Umstieg einmal in der App auf **Mit Claude verbinden** klicken, weil sich der Programmordner geändert haben kann.
+Bis Version 0.1.0 hieß die App „Picnic Desktop Client“. Nach dem Umstieg einmal in der App auf **Mit Claude verbinden** klicken, weil sich der Programmordner geändert haben kann.
 
 **Windows:** Die Installationsdatei ist nicht signiert. Wenn SmartScreen warnt: „Weitere Informationen“, dann „Trotzdem ausführen“.
 
