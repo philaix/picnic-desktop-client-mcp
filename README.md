@@ -51,10 +51,12 @@ Beim ersten Start meldest du dich mit deinem Picnic-Konto an (E-Mail und Passwor
 
 ## Mit Claude verbinden
 
-In der App links auf **Mit Claude verbinden** klicken:
+In der App links auf **Mit Claude verbinden** und dort auf den gleichnamigen Button klicken. Er trägt den Zugang an zwei Stellen ein, die Claude getrennt liest:
 
-- **Claude Desktop:** „In Claude Desktop eintragen“ klicken und Claude Desktop neu starten.
-- **Claude Code:** den angezeigten Befehl einmal im Terminal ausführen.
+- **Claude Desktop, Chat** (`claude_desktop_config.json`): Danach Claude Desktop ganz beenden (auch im Tray bzw. in der Menüleiste) und neu starten. Der Zugang steht dann über das „+“ im Eingabefeld → Konnektoren → „Konnektoren verwalten“.
+- **Claude Code**, also der Code-Tab der Desktop-App und das Terminal (`~/.claude.json`, über `claude mcp add-json --scope user`): Neue Code-Sessions haben den Zugang. Ist Claude Code nicht installiert, wird dieser Teil übersprungen.
+
+Wer es lieber von Hand macht, findet den Befehl und den JSON-Eintrag in der App unter „Von Hand einrichten“.
 
 Danach kannst du Claude zum Beispiel sagen:
 

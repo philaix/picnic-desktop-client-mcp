@@ -2,7 +2,7 @@ import { app, BrowserWindow, clipboard, ipcMain, shell } from "electron";
 import { readFileSync, watchFile } from "node:fs";
 import { join } from "node:path";
 import * as auth from "./core/client.js";
-import { claudeSetup, connectClaudeDesktop } from "./core/claude-setup.js";
+import { claudeSetup, connectClaude } from "./core/claude-setup.js";
 import * as dishes from "./core/dishes.js";
 import { cartVersionFile, type CountryCode } from "./core/session.js";
 import * as shop from "./core/shop.js";
@@ -55,7 +55,7 @@ const api: Record<string, (...args: any[]) => unknown> = {
   addDishToCart: changingCart((id: string, times?: number) => dishes.addDishToCart(id, times)),
   cartAsDishItems: () => dishes.cartAsDishItems(),
   claudeSetup: () => claudeSetup(appRoot),
-  connectClaudeDesktop: () => connectClaudeDesktop(appRoot),
+  connectClaude: () => connectClaude(appRoot),
   copy: (text: string) => clipboard.writeText(String(text)),
 };
 

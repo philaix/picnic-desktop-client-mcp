@@ -900,6 +900,44 @@ button:disabled {
   padding-left: 18px;
 }
 
+.connect-status {
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+  font-size: 14.5px;
+}
+
+.connect-status li {
+  padding: 6px 0 6px 22px;
+  position: relative;
+  color: var(--muted);
+}
+
+.connect-status li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 12px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+}
+
+.connect-status li.ok {
+  color: var(--ink);
+}
+
+.connect-status li.ok::before {
+  border-color: var(--leaf);
+  background: var(--leaf);
+}
+
+.connect-status strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 .examples li {
   margin-bottom: 6px;
 }

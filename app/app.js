@@ -425,20 +425,29 @@ const views = {
       viewHeader("Mit Claude verbinden", "Dann kann Claude für dich Produkte suchen und den Warenkorb füllen. Bestellen tust du weiterhin selbst.") +
       (setup.warning ? `<p class="note panel">${esc(setup.warning)}</p>` : "") +
       `<section class="panel">
-        <h2>Claude Desktop</h2>
-        <p>Trägt den Picnic-Zugang in die Einstellungen von Claude Desktop ein. Starte Claude Desktop danach einmal neu.</p>
-        ${setup.connected ? `<p class="ok">Ist bereits eingetragen.</p>` : ""}
-        <button class="primary" data-connect-desktop>${setup.connected ? "Erneut eintragen" : "In Claude Desktop eintragen"}</button>
+        <h2>Verbinden</h2>
+        <p>Trägt den Picnic-Zugang in Claude ein: in den Chat von Claude Desktop und in Claude Code, das der Code-Tab der Desktop-App und das Terminal nutzen.</p>
+        <ul class="connect-status">
+          <li class="${setup.inDesktop ? "ok" : ""}"><strong>Claude Desktop, Chat:</strong> ${setup.inDesktop ? "eingetragen" : "noch nicht eingetragen"}</li>
+          <li class="${setup.inCode ? "ok" : ""}"><strong>Claude Code, Code-Tab und Terminal:</strong> ${
+            setup.inCode ? "eingetragen" : setup.claudeCodeFound ? "noch nicht eingetragen" : "Claude Code ist nicht installiert, der Chat reicht aber"
+          }</li>
+        </ul>
+        <button class="primary" data-connect-claude>${setup.inDesktop && (setup.inCode || !setup.claudeCodeFound) ? "Erneut verbinden" : "Mit Claude verbinden"}</button>
       </section>
       <section class="panel">
-        <h2>Claude Code</h2>
-        <p>Führe diesen Befehl einmal im Terminal aus:</p>
-        <pre>${esc(setup.claudeCodeCommand)}</pre>
-        <button class="secondary" data-copy="0">Befehl kopieren</button>
+        <h2>Danach</h2>
+        <ul class="examples">
+          <li><strong>Chat:</strong> Claude Desktop ganz beenden, auch im Tray bzw. in der Menüleiste, und neu starten. Den Picnic-Zugang findest du dann über das „+“ unten links im Eingabefeld → Konnektoren → „Konnektoren verwalten“.</li>
+          <li><strong>Code-Tab:</strong> eine neue Session starten. Laufende Sessions sehen den Zugang erst nach einem Neustart.</li>
+        </ul>
       </section>
       <details class="panel">
         <summary>Von Hand einrichten</summary>
-        <p>Für andere MCP-Programme: diesen Eintrag in deren Server-Liste übernehmen.</p>
+        <p>Claude Code im Terminal:</p>
+        <pre>${esc(setup.claudeCodeCommand)}</pre>
+        <button class="secondary" data-copy="0">Befehl kopieren</button>
+        <p>Claude Desktop oder andere MCP-Programme: diesen Eintrag in die Server-Liste übernehmen.</p>
         <pre>${esc(setup.desktopJson)}</pre>
         <button class="secondary" data-copy="1">JSON kopieren</button>
       </details>
@@ -1019,11 +1028,14 @@ document.addEventListener("click", (event) => {
   if (d.copy !== undefined) {
     return api("copy", state.copies[Number(d.copy)]).then(() => toast("Kopiert"));
   }
-  if (d.connectDesktop !== undefined) {
+  if (d.connectClaude !== undefined) {
     target.disabled = true;
-    return api("connectClaudeDesktop")
-      .then(() => {
-        toast("In Claude Desktop eingetragen. Starte Claude Desktop jetzt neu.");
+    return api("connectClaude")
+      .then(({ desktop, code }) => {
+        if (desktop.ok) toast("In Claude Desktop eingetragen. Beende Claude Desktop ganz und starte es neu.");
+        else toast(`Claude Desktop: ${desktop.reason}`, "error");
+        if (code.ok) toast("In Claude Code eingetragen. Neue Code-Sessions haben den Zugang.");
+        else if (!/nicht installiert/.test(code.reason)) toast(`Claude Code: ${code.reason}`, "error");
         return go("claude", {}, { reset: true });
       })
       .catch((error) => toast(error.message, "error"))
