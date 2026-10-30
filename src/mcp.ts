@@ -45,10 +45,20 @@ function tool<T>(run: (args: T) => Promise<unknown>) {
   };
 }
 
+const appRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+function appVersion(): string {
+  try {
+    return JSON.parse(readFileSync(join(appRoot, "package.json"), "utf8")).version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
 /** The app icon, sent in serverInfo so clients can show it next to the connector. */
 function appIcons() {
   try {
-    const png = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "app", "icon.png"));
+    const png = readFileSync(join(appRoot, "app", "icon.png"));
     return [{ src: `data:image/png;base64,${png.toString("base64")}`, mimeType: "image/png", sizes: ["256x256"] }];
   } catch {
     return undefined;
@@ -56,7 +66,7 @@ function appIcons() {
 }
 
 const server = new McpServer(
-  { name: "picnic", title: "Picnic", version: "0.1.0", icons: appIcons() },
+  { name: "picnic", title: "Picnic", version: appVersion(), icons: appIcons() },
   {
     instructions: [
       "Zugriff auf das Picnic-Konto des Nutzers (Online-Supermarkt mit Lieferung).",
