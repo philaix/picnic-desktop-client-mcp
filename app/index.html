@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: data:; base-uri 'none'; form-action 'none'"
+    />
+    <title>Picnic Desktop Client</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <img class="brand-logo" src="logo.svg" alt="" />
+        <div>
+          <span class="brand-name">Picnic Desktop</span>
+          <span class="brand-sub">Inoffizieller Client</span>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item" data-nav="promotions"><span data-icon="tag"></span>Angebote</button>
+        <button class="nav-item" data-nav="categories"><span data-icon="grid"></span>Kategorien</button>
+        <button class="nav-item" data-nav="favorites"><span data-icon="heart"></span>Meine Produkte</button>
+        <button class="nav-item" data-nav="dishes"><span data-icon="pot"></span>Meine Gerichte</button>
+        <button class="nav-item" data-nav="orders"><span data-icon="box"></span>Bestellungen</button>
+      </nav>
+      <div class="sidebar-foot">
+        <button class="nav-item" data-nav="claude"><span data-icon="spark"></span>Mit Claude verbinden</button>
+        <div class="account">
+          <span id="account-name"></span>
+          <button class="link" data-logout>Abmelden</button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="center">
+      <form class="searchbar" id="search-form" role="search">
+        <span data-icon="search"></span>
+        <input type="search" name="q" placeholder="Produkte suchen, z. B. Hafermilch" autocomplete="off" aria-label="Produkte suchen" />
+      </form>
+      <main id="main" tabindex="-1"></main>
+    </div>
+
+    <aside class="cart" aria-label="Warenkorb">
+      <div class="receipt" id="cart"></div>
+    </aside>
+
+    <div class="modal" id="modal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true">
+        <button class="modal-close" data-close aria-label="Schließen"><span data-icon="close"></span></button>
+        <div class="modal-body"></div>
+      </div>
+    </div>
+
+    <div class="login" id="login" hidden>
+      <div class="login-brand">
+        <img class="login-logo" src="logo.svg" alt="" />
+        <span class="brand-name">Picnic Desktop</span>
+        <span class="brand-sub">Inoffizieller Client</span>
+      </div>
+      <form class="login-card" id="login-form">
+        <h1>Bei Picnic anmelden</h1>
+        <p>Mit deinem Picnic-Konto. Das Passwort wird nicht gespeichert, auf diesem Gerät bleibt nur der Anmeldeschlüssel.</p>
+        <label>Land
+          <select name="country">
+            <option value="DE">Deutschland</option>
+            <option value="NL">Niederlande</option>
+            <option value="FR">Frankreich</option>
+          </select>
+        </label>
+        <label>E-Mail-Adresse<input type="email" name="email" autocomplete="username" required /></label>
+        <label>Passwort<input type="password" name="password" autocomplete="current-password" required /></label>
+        <p class="form-error" hidden></p>
+        <button class="primary" type="submit">Anmelden</button>
+      </form>
+      <form class="login-card" id="code-form" hidden>
+        <h1>Code eingeben</h1>
+        <p>Picnic hat dir einen Bestätigungscode per SMS geschickt.</p>
+        <label>Code<input name="code" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required /></label>
+        <p class="form-error" hidden></p>
+        <button class="primary" type="submit">Bestätigen</button>
+        <div class="login-links">
+          <button type="button" class="link" data-resend>Code erneut senden</button>
+          <button type="button" class="link" data-restart>Andere E-Mail-Adresse</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

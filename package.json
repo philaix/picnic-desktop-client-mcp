@@ -1,0 +1,72 @@
+{
+  "name": "picnic-desktop-client-mcp",
+  "productName": "Picnic Desktop Client",
+  "version": "0.1.0",
+  "description": "Inoffizieller Desktop-Client für den Lieferdienst Picnic – mit MCP-Server, damit Claude den Warenkorb füllen kann",
+  "type": "module",
+  "main": "dist/main.js",
+  "author": "Philipp Kremer",
+  "license": "MIT",
+  "repository": "github:philaix/picnic-desktop-client-mcp",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "npm run build && electron .",
+    "mcp": "node dist/mcp.js",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "picnic-api": "^5.3.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "build": {
+    "appId": "io.github.picnic-desktop-client",
+    "productName": "Picnic Desktop Client",
+    "asar": false,
+    "files": [
+      "dist/**/*",
+      "app/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "category": "public.app-category.shopping",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
+  }
+}
