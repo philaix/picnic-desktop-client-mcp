@@ -58,7 +58,7 @@ const api: Record<string, (...args: any[]) => unknown> = {
   cartAsDishItems: () => dishes.cartAsDishItems(),
   orderSummary: () => checkout.orderSummary(),
   placeOrder: (confirmation: string, resolveKey?: string) => checkout.placeOrder(confirmation, resolveKey),
-  orderStatus: changingCart((transactionId: string) => checkout.orderStatus(transactionId)),
+  orderStatus: changingCart((orderId: string) => checkout.orderStatus(orderId)),
   cancelPayment: (transactionId: string) => checkout.cancelPayment(transactionId),
   openPaymentPage: (url: string) => {
     // Only real payment pages; the renderer never gets to open arbitrary links.

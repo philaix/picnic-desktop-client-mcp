@@ -60,7 +60,7 @@ const server = new McpServer(
     instructions: [
       "Zugriff auf das Picnic-Konto des Nutzers (Online-Supermarkt mit Lieferung).",
       "Du kannst Produkte suchen und durchstöbern, den Warenkorb füllen und ein Lieferfenster wählen.",
-      "Bestellen geht nur, wenn der Nutzer es im Picnic Desktop Client erlaubt hat, und immer so: prepare_order aufrufen, dem Nutzer Summe, Lieferfenster und Zahlungsart zeigen, seine ausdrückliche Zustimmung abwarten, dann place_order mit dem Bestätigungscode. Die Zahlung bestätigt der Nutzer selbst auf der Zahlungsseite im Browser; danach get_order_status.",
+      "Bestellen geht nur, wenn der Nutzer es im Picnic Desktop Client erlaubt hat, und immer so: prepare_order aufrufen, dem Nutzer Summe, Lieferfenster und Zahlungsart zeigen, seine ausdrückliche Zustimmung abwarten, dann place_order mit dem Bestätigungscode. place_order ist verbindlich: Picnic bucht sofort über die hinterlegte Zahlungsart ab; nur wenn sie eine Bestätigung verlangt (z. B. 3-D Secure), öffnet sich eine Seite im Browser. Danach get_order_status.",
       "Ohne Erlaubnis oder ohne Zustimmung: sag dem Nutzer, dass der Warenkorb bereitliegt und er in der App bestellen kann.",
       "Wenn ein Produkt mehrdeutig ist (Marke, Größe, Bio), nimm bevorzugt Produkte mit boughtBefore=true oder frag nach.",
       "'Meine Gerichte' sind eigene Zusammenstellungen des Nutzers (Produkte, optional Portionen, Makros pro Portion und ein Rezept in Markdown); sie liegen nur auf diesem Gerät.",
@@ -436,7 +436,7 @@ server.registerTool(
   {
     title: "Bestellung auslösen",
     description:
-      "Bestellt den Warenkorb. Nur aufrufen, nachdem der Nutzer die Zusammenfassung aus prepare_order ausdrücklich bestätigt hat. Öffnet die Zahlungsseite im Browser des Nutzers; bezahlt ist erst, wenn er dort bestätigt. Danach get_order_status. Meldet Picnic einen Hinweis (z. B. Altersprüfung), zeig ihn dem Nutzer und ruf nach seiner Zustimmung erneut mit resolve_key auf.",
+      "Bestellt den Warenkorb verbindlich; Picnic bucht über die hinterlegte Zahlungsart ab. Nur aufrufen, nachdem der Nutzer die Zusammenfassung aus prepare_order ausdrücklich bestätigt hat. Verlangt die Zahlungsart eine Bestätigung, öffnet sich dafür eine Seite im Browser des Nutzers. Danach get_order_status mit der orderId. Meldet Picnic einen Hinweis (z. B. Altersprüfung), zeig ihn dem Nutzer und ruf nach seiner Zustimmung erneut mit resolve_key auf.",
     inputSchema: {
       confirmation: z.string().describe("Bestätigungscode aus prepare_order"),
       resolve_key: z.string().optional().describe("Aus einem Hinweis, dem der Nutzer zugestimmt hat"),
@@ -460,8 +460,8 @@ server.registerTool(
       ...result,
       paymentPageOpened: result.paymentUrl ? openInBrowser(result.paymentUrl) : false,
       next: result.paymentUrl
-        ? "Der Nutzer bestätigt jetzt die Zahlung auf der Zahlungsseite (paymentUrl, im Browser geöffnet). Danach get_order_status mit transactionId."
-        : "get_order_status mit transactionId aufrufen.",
+        ? "Die Zahlungsart verlangt eine Bestätigung: Der Nutzer bestätigt sie auf der Seite im Browser (paymentUrl). Danach get_order_status mit orderId."
+        : "Picnic bucht ab. get_order_status mit orderId aufrufen, bis die Bestellung angenommen ist.",
     };
   }),
 );
@@ -470,12 +470,12 @@ server.registerTool(
   "get_order_status",
   {
     title: "Bestellstatus",
-    description: "Prüft, ob die Zahlung einer mit place_order gestarteten Bestellung bestätigt und die Bestellung angenommen ist.",
-    inputSchema: { transaction_id: z.string().describe("transactionId aus place_order") },
+    description: "Prüft, ob eine mit place_order ausgelöste Bestellung bezahlt und von Picnic angenommen ist.",
+    inputSchema: { order_id: z.string().describe("orderId aus place_order") },
     annotations: readOnly,
   },
-  tool(async ({ transaction_id }: { transaction_id: string }) => {
-    const status = await checkout.orderStatus(transaction_id);
+  tool(async ({ order_id }: { order_id: string }) => {
+    const status = await checkout.orderStatus(order_id);
     if (status.state !== "placed") return status;
     const [delivery] = await shop.deliveries(1);
     return { ...status, delivery };
@@ -486,7 +486,8 @@ server.registerTool(
   "cancel_order",
   {
     title: "Bestellung abbrechen",
-    description: "Bricht eine mit place_order gestartete Bestellung ab, solange die Zahlung noch nicht bestätigt ist.",
+    description:
+      "Bricht eine mit place_order gestartete Bestellung ab, solange die Zahlung noch auf die Bestätigung des Nutzers wartet (nur wenn place_order eine paymentUrl geliefert hat).",
     inputSchema: { transaction_id: z.string().describe("transactionId aus place_order") },
     annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
   },

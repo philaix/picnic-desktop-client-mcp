@@ -3,11 +3,14 @@ import { getClient } from "./client.js";
 import { markCartChanged } from "./session.js";
 import * as shop from "./shop.js";
 
-// Ordering follows the app: start the checkout for the cart as it is, start the payment, let the
-// user approve it on the payment page (PayPal, card, bank), then poll until Picnic reports it done.
+// Ordering follows the app: confirm the slot, start the checkout for the cart as it is, start the
+// payment, then poll the order until Picnic reports it done. A stored payment method (PayPal, SEPA)
+// pays right away; only a method that needs the user's approval (e.g. 3-D Secure) returns a page.
 
-/** Where the payment page sends the browser afterwards; the app learns the result by polling. */
-const PAYMENT_RETURN_URL = "https://picnic.app/de/";
+/** The app's own return link; Picnic denies the payment (PAYMENT_REQUEST_DENIED) for web URLs. */
+const PAYMENT_RETURN_URL = "nl.picnic-supermarkt://payment";
+
+const nonEmpty = (value: string | null | undefined) => (value && value.trim() ? value : null);
 
 export type OrderSummary = {
   /** Whether the order can be placed as it is. */
@@ -107,7 +110,7 @@ export async function placeOrder(confirmation: string, resolveKey?: string): Pro
     status: "payment",
     orderId: checkout.order_id,
     transactionId: payment.transaction_id,
-    paymentUrl: payment.action?.redirect_url ?? payment.issuer_authentication_url ?? null,
+    paymentUrl: nonEmpty(payment.issuer_authentication_url) ?? nonEmpty(payment.action?.redirect_url),
     total: checkout.total_price,
     expiresAt: checkout.transaction_expiry,
   };
@@ -115,8 +118,9 @@ export async function placeOrder(confirmation: string, resolveKey?: string): Pro
 
 export type OrderState = { state: "placed" | "waiting" | "failed"; detail: string };
 
-export async function orderStatus(transactionId: string): Promise<OrderState> {
-  const { checkout_status: status } = await getClient().checkout.getCheckoutStatus(transactionId);
+/** The order's checkout status; Picnic answers this by order id (the transaction id gives 404). */
+export async function orderStatus(orderId: string): Promise<OrderState> {
+  const { checkout_status: status } = await getClient().checkout.getOrderStatus(orderId);
   if (status === "FINISHED") {
     markCartChanged();
     return { state: "placed", detail: status };

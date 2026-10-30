@@ -437,7 +437,7 @@ const views = {
       </section>
       <section class="panel">
         <h2>Bestellen durch Claude</h2>
-        <p>Claude kann den Warenkorb immer füllen. Bestellungen auslösen darf Claude nur, wenn du es hier erlaubst. Vorher zeigt Claude dir Summe und Lieferfenster und fragt nach, und die Zahlung bestätigst du selbst auf der Zahlungsseite.</p>
+        <p>Claude kann den Warenkorb immer füllen. Bestellungen auslösen darf Claude nur, wenn du es hier erlaubst. Vorher zeigt Claude dir Summe und Lieferfenster und fragt nach. Nach deinem Ja ist die Bestellung verbindlich, Picnic bucht über deine hinterlegte Zahlungsart ab.</p>
         <label class="toggle"><input type="checkbox" data-setting="claudeMayOrder"${settings.claudeMayOrder ? " checked" : ""}> Claude darf Bestellungen auslösen</label>
         <label class="field limit-field">Höchstbetrag pro Bestellung in Euro<input type="number" min="1" step="1" data-setting="claudeOrderLimit" value="${Math.round(settings.claudeOrderLimit / 100)}"></label>
       </section>
@@ -703,8 +703,8 @@ async function openSlots() {
 
 // ---------- Checkout ----------
 
-/** The payment in progress; polling stops when it is cleared. */
-const payment = { transactionId: null, paymentUrl: null, expiresAt: null, timer: null };
+/** The order in progress; polling stops when `orderId` is cleared. */
+const payment = { orderId: null, transactionId: null, paymentUrl: null, expiresAt: null, timer: null };
 
 function checkoutModal(html) {
   openModal(`<div class="checkout">${html}</div>`, true);
@@ -731,7 +731,7 @@ async function openCheckout() {
       ${summary.problems.length ? `<ul class="checkout-problems">${summary.problems.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
       <div class="checkout-total"><span>Gesamt</span><strong>${euro(summary.total)}</strong></div>
       <button class="primary order-now" data-place-order${summary.ready ? "" : " disabled"}>Zahlungspflichtig bestellen</button>
-      <p class="hint">Danach öffnet sich die Zahlungsseite im Browser, zum Beispiel PayPal. Dort bestätigst du die Zahlung.</p>`);
+      <p class="hint">Mit dem Klick bestellst du verbindlich. Picnic bucht über deine hinterlegte Zahlungsart ab; verlangt sie eine Bestätigung, öffnet sich dafür eine Seite im Browser.</p>`);
   } catch (error) {
     checkoutModal(`<p class="error-block">${esc(error.message)}</p>`);
   }
@@ -751,17 +751,29 @@ async function placeOrder(resolveKey) {
           <button class="secondary" data-close>Abbrechen</button>
         </div>`);
     }
-    Object.assign(payment, { transactionId: result.transactionId, paymentUrl: result.paymentUrl, expiresAt: result.expiresAt });
-    if (result.paymentUrl) api("openPaymentPage", result.paymentUrl).catch((error) => toast(error.message, "error"));
-    checkoutModal(`
-      <h2>Zahlung bestätigen</h2>
-      <p>${result.paymentUrl ? "Im Browser ist die Zahlungsseite offen. Bestätige dort die Zahlung, danach geht es hier von allein weiter." : "Picnic verarbeitet die Zahlung."}</p>
-      <div class="checkout-total"><span>Betrag</span><strong>${euro(result.total)}</strong></div>
-      <p class="checkout-wait"><span class="spinner"></span>Warte auf die Bestätigung von Picnic …</p>
-      <div class="dish-buttons">
-        ${result.paymentUrl ? `<button class="secondary" data-open-payment>Zahlungsseite erneut öffnen</button>` : ""}
-        <button class="link danger" data-cancel-payment>Bestellung abbrechen</button>
-      </div>`);
+    Object.assign(payment, {
+      orderId: result.orderId,
+      transactionId: result.transactionId,
+      paymentUrl: result.paymentUrl,
+      expiresAt: result.expiresAt,
+    });
+    if (result.paymentUrl) {
+      api("openPaymentPage", result.paymentUrl).catch((error) => toast(error.message, "error"));
+      checkoutModal(`
+        <h2>Zahlung bestätigen</h2>
+        <p>Deine Zahlungsart verlangt eine Bestätigung. Im Browser ist die Seite dafür offen; danach geht es hier von allein weiter.</p>
+        <div class="checkout-total"><span>Betrag</span><strong>${euro(result.total)}</strong></div>
+        <p class="checkout-wait"><span class="spinner"></span>Warte auf die Bestätigung von Picnic …</p>
+        <div class="dish-buttons">
+          <button class="secondary" data-open-payment>Seite erneut öffnen</button>
+          <button class="link danger" data-cancel-payment>Bestellung abbrechen</button>
+        </div>`);
+    } else {
+      checkoutModal(`
+        <h2>Bestellung wird abgeschlossen</h2>
+        <div class="checkout-total"><span>Betrag</span><strong>${euro(result.total)}</strong></div>
+        <p class="checkout-wait"><span class="spinner"></span>Picnic bucht ab und bestätigt die Bestellung …</p>`);
+    }
     pollPayment();
   } catch (error) {
     checkoutModal(`<h2>Das hat nicht geklappt</h2><p class="error-block">${esc(error.message)}</p><button class="secondary" data-checkout>Erneut prüfen</button>`);
@@ -770,21 +782,27 @@ async function placeOrder(resolveKey) {
 
 function pollPayment() {
   clearTimeout(payment.timer);
-  const transactionId = payment.transactionId;
-  if (!transactionId) return;
+  const orderId = payment.orderId;
+  if (!orderId) return;
   payment.timer = setTimeout(async () => {
-    if (payment.transactionId !== transactionId) return;
+    if (payment.orderId !== orderId) return;
     if (payment.expiresAt && Date.now() > Date.parse(payment.expiresAt) + 60_000) {
-      payment.transactionId = null;
-      return checkoutModal(`<h2>Zeit abgelaufen</h2><p>Die Zahlung wurde nicht rechtzeitig bestätigt. Der Warenkorb ist unverändert, du kannst es erneut versuchen.</p><button class="secondary" data-checkout>Erneut prüfen</button>`);
+      payment.orderId = null;
+      // An order Picnic took has emptied the cart even if the status never said so.
+      const cart = await api("cart").catch(() => null);
+      if (cart && cart.items.length === 0) {
+        applyCart(cart);
+        return checkoutModal(`<h2>Wird verarbeitet</h2><p>Picnic hat den Warenkorb übernommen, die Bestätigung kam aber nicht rechtzeitig. Schau unter Bestellungen nach, bevor du erneut bestellst.</p><button class="primary" data-nav="orders">Zu meinen Bestellungen</button>`);
+      }
+      return checkoutModal(`<h2>Zeit abgelaufen</h2><p>Die Bestellung wurde nicht rechtzeitig bestätigt. Der Warenkorb ist unverändert, du kannst es erneut versuchen.</p><button class="secondary" data-checkout>Erneut prüfen</button>`);
     }
     try {
-      const status = await api("orderStatus", transactionId);
-      if (payment.transactionId !== transactionId) return;
+      const status = await api("orderStatus", orderId);
+      if (payment.orderId !== orderId) return;
       if (status.state === "placed") return finishOrder();
       if (status.state === "failed") {
-        payment.transactionId = null;
-        return checkoutModal(`<h2>Nicht bezahlt</h2><p>Die Zahlung wurde nicht abgeschlossen (${esc(status.detail)}). Es wurde nichts bestellt.</p><button class="secondary" data-checkout>Erneut prüfen</button>`);
+        payment.orderId = null;
+        return checkoutModal(`<h2>Nicht bestellt</h2><p>Picnic hat die Bestellung nicht abgeschlossen (${esc(status.detail)}).</p><button class="secondary" data-checkout>Erneut prüfen</button>`);
       }
     } catch {
       // A failed status check is retried on the next round.
@@ -794,7 +812,7 @@ function pollPayment() {
 }
 
 async function finishOrder() {
-  payment.transactionId = null;
+  payment.orderId = null;
   cartTask(() => api("cart"));
   const [latest] = await api("deliveries", 1).catch(() => []);
   const when = latest?.start ? `${dateFormat.format(new Date(latest.start))}, ${timeRange(latest.start, latest.end)}` : null;
@@ -807,6 +825,7 @@ async function finishOrder() {
 
 async function cancelPayment() {
   const transactionId = payment.transactionId;
+  payment.orderId = null;
   payment.transactionId = null;
   clearTimeout(payment.timer);
   if (!transactionId) return closeModal();

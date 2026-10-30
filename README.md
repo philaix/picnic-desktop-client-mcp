@@ -11,14 +11,14 @@ Ein inoffizieller Desktop-Client für den Lebensmittel-Lieferdienst [Picnic](htt
 - Warenkorb bearbeiten und Lieferfenster wählen
 - Frühere Bestellungen ansehen und mit einem Klick erneut in den Warenkorb legen
 - **Meine Gerichte** (eigene Funktion, nicht von Picnic): Produkte zu Gerichten zusammenstellen und mit einem Klick in den Warenkorb legen. Optional mit Portionen, Makros pro Portion (kcal, Eiweiß, Kohlenhydrate, Fett) und einem Rezept in Markdown. Gerichte entstehen im Editor, aus dem aktuellen Warenkorb oder über „Zu einem Gericht hinzufügen“ in der Produktansicht.
-- **Bestellen:** „Bestellen“ im Warenkorb zeigt Summe, Lieferfenster und Zahlungsart. Nach „Zahlungspflichtig bestellen“ öffnet sich die Zahlungsseite deiner bei Picnic hinterlegten Zahlungsart (z. B. PayPal) im Browser; dort bestätigst du die Zahlung, die App wartet und meldet die Bestellung.
+- **Bestellen:** „Bestellen“ im Warenkorb zeigt Summe, Lieferfenster und Zahlungsart. „Zahlungspflichtig bestellen“ bestellt verbindlich, Picnic bucht über deine hinterlegte Zahlungsart ab. Verlangt sie eine Bestätigung (z. B. 3-D Secure), öffnet sich dafür eine Seite im Browser. Die App wartet und meldet die Bestellung.
 - Claude anbinden: Claude füllt den Warenkorb, die App zeigt die Änderungen sofort an
 
 Bestellen geht weiterhin auch in der Picnic-App auf dem Handy; der Warenkorb ist dort derselbe, weil er zu deinem Konto gehört.
 
 ### Bestellen durch Claude
 
-Claude darf nur bestellen, wenn du es in der App unter **Mit Claude verbinden** erlaubst (standardmäßig aus), und nur bis zum dort eingestellten Höchstbetrag (Standard 150 €). Dann läuft es immer so: Claude ruft `prepare_order` auf, zeigt dir Summe, Lieferfenster und Zahlungsart und fragt nach. Erst nach deinem Ja ruft es `place_order` mit dem Bestätigungscode auf. Der Code gilt nur für den Warenkorb in genau diesem Zustand. Die Zahlung bestätigst du selbst auf der Zahlungsseite, die sich im Browser öffnet.
+Claude darf nur bestellen, wenn du es in der App unter **Mit Claude verbinden** erlaubst (standardmäßig aus), und nur bis zum dort eingestellten Höchstbetrag (Standard 150 €). Dann läuft es immer so: Claude ruft `prepare_order` auf, zeigt dir Summe, Lieferfenster und Zahlungsart und fragt nach. Erst nach deinem Ja ruft es `place_order` mit dem Bestätigungscode auf. Der Code gilt nur für den Warenkorb in genau diesem Zustand. Die Bestellung ist dann verbindlich: Picnic bucht über deine hinterlegte Zahlungsart ab (bei hinterlegtem PayPal oder Lastschrift ohne weitere Rückfrage). Nur wenn die Zahlungsart eine Bestätigung verlangt, etwa 3-D Secure, öffnet sich dafür eine Seite im Browser.
 
 ## Installation
 
