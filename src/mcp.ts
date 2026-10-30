@@ -460,8 +460,8 @@ server.registerTool(
       ...result,
       paymentPageOpened: result.paymentUrl ? openInBrowser(result.paymentUrl) : false,
       next: result.paymentUrl
-        ? "Die Zahlungsart verlangt eine Bestätigung: Der Nutzer bestätigt sie auf der Seite im Browser (paymentUrl). Danach get_order_status mit orderId."
-        : "Picnic bucht ab. get_order_status mit orderId aufrufen, bis die Bestellung angenommen ist.",
+        ? "Die Zahlungsart verlangt eine Bestätigung: Der Nutzer bestätigt sie auf der Seite im Browser (paymentUrl). Danach get_order_status mit orderId und transactionId."
+        : "Picnic bucht ab. get_order_status mit orderId und transactionId aufrufen, bis die Bestellung angenommen ist.",
     };
   }),
 );
@@ -470,12 +470,16 @@ server.registerTool(
   "get_order_status",
   {
     title: "Bestellstatus",
-    description: "Prüft, ob eine mit place_order ausgelöste Bestellung bezahlt und von Picnic angenommen ist.",
-    inputSchema: { order_id: z.string().describe("orderId aus place_order") },
-    annotations: readOnly,
+    description:
+      "Prüft, ob eine mit place_order ausgelöste Bestellung bezahlt und von Picnic angenommen ist. Hat der Nutzer die Zahlung auf der Seite bestätigt, schließt dieser Aufruf die Bestellung ab. Mit order_id und transaction_id aus place_order aufrufen.",
+    inputSchema: {
+      order_id: z.string().describe("orderId aus place_order"),
+      transaction_id: z.string().optional().describe("transactionId aus place_order"),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
   },
-  tool(async ({ order_id }: { order_id: string }) => {
-    const status = await checkout.orderStatus(order_id);
+  tool(async ({ order_id, transaction_id }: { order_id: string; transaction_id?: string }) => {
+    const status = await checkout.orderStatus(order_id, transaction_id);
     if (status.state !== "placed") return status;
     const [delivery] = await shop.deliveries(1);
     return { ...status, delivery };

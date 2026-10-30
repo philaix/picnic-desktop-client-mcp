@@ -89,6 +89,8 @@ export function describeError(error: unknown): string {
   if (PicnicClient.isPicnicApiError(error)) {
     if (error.code === "AUTH_INVALID_CRED") return "E-Mail-Adresse oder Passwort ist falsch.";
     if (error.code === "OTP_NOT_VALID") return "Der SMS-Code ist ungültig oder abgelaufen.";
+    if (error.code === "PAYMENT_REQUEST_DENIED")
+      return "Picnic hat die Zahlung abgelehnt. Meist fehlt eine Standard-Zahlungsart: Öffne in der Picnic-App einmal die Kasse, wähle deine Zahlungsart aus und brich dann ab. Danach erneut bestellen.";
     if (error.code === "CART_CONFIRM_SLOT") return "Picnic möchte, dass du das Lieferfenster bestätigst. Bitte ein Lieferfenster auswählen und erneut bestellen.";
     if (error.status === 401)
       return "Die Picnic-Anmeldung ist abgelaufen. Bitte im Picnic Desktop Client neu anmelden.";

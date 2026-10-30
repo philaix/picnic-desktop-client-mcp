@@ -16,6 +16,8 @@ Ein inoffizieller Desktop-Client für den Lebensmittel-Lieferdienst [Picnic](htt
 
 Bestellen geht weiterhin auch in der Picnic-App auf dem Handy; der Warenkorb ist dort derselbe, weil er zu deinem Konto gehört.
 
+**Standard-Zahlungsart:** Picnic bucht die bei deinem Konto als Standard gewählte Zahlungsart ab. Ist keine gesetzt (z. B. weil PayPal länger nicht benutzt wurde), lehnt Picnic die Zahlung ab; die App erkennt das vorab und sperrt den Bestell-Button. Dann einmal in der Picnic-App zur Kasse gehen, die Zahlungsart auswählen und abbrechen. Bei PayPal öffnet sich nach „Zahlungspflichtig bestellen“ die PayPal-Seite; meldet der Browser danach, dass er einen Link nicht öffnen kann, ist das normal, die App schließt die Bestellung selbst ab.
+
 ### Bestellen durch Claude
 
 Claude darf nur bestellen, wenn du es in der App unter **Mit Claude verbinden** erlaubst (standardmäßig aus), und nur bis zum dort eingestellten Höchstbetrag (Standard 150 €). Dann läuft es immer so: Claude ruft `prepare_order` auf, zeigt dir Summe, Lieferfenster und Zahlungsart und fragt nach. Erst nach deinem Ja ruft es `place_order` mit dem Bestätigungscode auf. Der Code gilt nur für den Warenkorb in genau diesem Zustand. Die Bestellung ist dann verbindlich: Picnic bucht über deine hinterlegte Zahlungsart ab (bei hinterlegtem PayPal oder Lastschrift ohne weitere Rückfrage). Nur wenn die Zahlungsart eine Bestätigung verlangt, etwa 3-D Secure, öffnet sich dafür eine Seite im Browser.

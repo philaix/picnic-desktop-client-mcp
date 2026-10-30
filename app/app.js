@@ -761,7 +761,7 @@ async function placeOrder(resolveKey) {
       api("openPaymentPage", result.paymentUrl).catch((error) => toast(error.message, "error"));
       checkoutModal(`
         <h2>Zahlung bestätigen</h2>
-        <p>Deine Zahlungsart verlangt eine Bestätigung. Im Browser ist die Seite dafür offen; danach geht es hier von allein weiter.</p>
+        <p>Deine Zahlungsart verlangt eine Bestätigung. Im Browser ist die Seite dafür offen; danach geht es hier von allein weiter. Meldet der Browser danach, dass er einen Link nicht öffnen kann, ist das normal: Schließ den Tab einfach.</p>
         <div class="checkout-total"><span>Betrag</span><strong>${euro(result.total)}</strong></div>
         <p class="checkout-wait"><span class="spinner"></span>Warte auf die Bestätigung von Picnic …</p>
         <div class="dish-buttons">
@@ -797,7 +797,7 @@ function pollPayment() {
       return checkoutModal(`<h2>Zeit abgelaufen</h2><p>Die Bestellung wurde nicht rechtzeitig bestätigt. Der Warenkorb ist unverändert, du kannst es erneut versuchen.</p><button class="secondary" data-checkout>Erneut prüfen</button>`);
     }
     try {
-      const status = await api("orderStatus", orderId);
+      const status = await api("orderStatus", orderId, payment.transactionId);
       if (payment.orderId !== orderId) return;
       if (status.state === "placed") return finishOrder();
       if (status.state === "failed") {

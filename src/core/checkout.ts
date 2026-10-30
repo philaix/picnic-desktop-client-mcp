@@ -68,14 +68,19 @@ export type PlaceOrderResult =
   | { status: "issue"; issue: CheckoutIssue }
   | { status: "payment"; orderId: string; transactionId: string; paymentUrl: string | null; total: number; expiresAt: string };
 
-async function paymentMethod(client: PicnicClient): Promise<string | null> {
+/** Shown when Picnic has no default payment method; it then denies the payment (PAYMENT_REQUEST_DENIED). */
+export const NO_DEFAULT_PAYMENT =
+  "Picnic kennt für dein Konto gerade keine Standard-Zahlungsart. Öffne in der Picnic-App einmal die Kasse, wähle dort deine Zahlungsart aus und brich dann ab. Danach klappt das Bestellen hier.";
+
+/** The payment method Picnic will charge: the preferred stored option. `null` name when unknown. */
+async function paymentMethod(client: PicnicClient): Promise<{ name: string | null; hasDefault: boolean | null }> {
   try {
     const profile = await client.payment.getPaymentProfile();
-    const stored = profile.stored_payment_options ?? [];
-    const preferred = stored.find((option) => option.id === profile.preferred_payment_option_id) ?? stored[0];
-    return preferred?.display_name ?? null;
+    const preferred = (profile.stored_payment_options ?? []).find((option) => option.id === profile.preferred_payment_option_id);
+    return { name: preferred?.display_name ?? null, hasDefault: !!preferred };
   } catch {
-    return null;
+    // Unknown: let Picnic decide at checkout instead of blocking the order.
+    return { name: null, hasDefault: null };
   }
 }
 
@@ -88,6 +93,7 @@ export async function orderSummary(): Promise<OrderSummary> {
   if (cart.minimumOrderValue && cart.total < cart.minimumOrderValue) {
     problems.push(`Der Mindestbestellwert von ${(cart.minimumOrderValue / 100).toFixed(2).replace(".", ",")} € ist noch nicht erreicht.`);
   }
+  if (method.hasDefault === false) problems.push(NO_DEFAULT_PAYMENT);
   return {
     ready: problems.length === 0,
     problems,
@@ -95,7 +101,7 @@ export async function orderSummary(): Promise<OrderSummary> {
     total: cart.total,
     minimumOrderValue: cart.minimumOrderValue,
     slot: cart.slot ? { start: cart.slot.start, end: cart.slot.end, suggested: !cart.slot.chosenByUser } : null,
-    paymentMethod: method,
+    paymentMethod: method.name,
     unavailable: cart.items.filter((item) => item.unavailable).map((item) => item.name),
     confirmation: String(cart.version),
   };
@@ -155,15 +161,41 @@ export async function placeOrder(confirmation: string, resolveKey?: string): Pro
 
 export type OrderState = { state: "placed" | "waiting" | "failed"; detail: string };
 
-/** The order's checkout status; Picnic answers this by order id (the transaction id gives 404). */
-export async function orderStatus(orderId: string): Promise<OrderState> {
-  const { checkout_status: status } = await getClient().checkout.getOrderStatus(orderId);
-  if (status === "FINISHED") {
+const isFailed = (status: string) => /FAIL|CANCEL|EXPIRE|ERROR|REJECT|DENIED/i.test(status);
+
+/** Orders this process already confirmed, so polling never confirms twice. */
+const confirmedOrders = new Set<string>();
+
+/**
+ * Where an order stands. A payment that went through on its own (direct debit) finishes the order;
+ * a payment the user approved on a page (PayPal) only finishes the transaction, and the order then
+ * still has to be confirmed, as Picnic's own clients do (`confirmOrder`).
+ */
+export async function orderStatus(orderId: string, transactionId?: string): Promise<OrderState> {
+  const client = getClient();
+  const order = await client.checkout.getOrderStatus(orderId);
+  if (order.checkout_status === "FINISHED") {
     markCartChanged();
-    return { state: "placed", detail: status };
+    return { state: "placed", detail: order.checkout_status };
   }
-  if (/FAIL|CANCEL|EXPIRE|ERROR|REJECT/i.test(status)) return { state: "failed", detail: status };
-  return { state: "waiting", detail: status };
+  if (isFailed(order.checkout_status)) return { state: "failed", detail: order.checkout_status };
+  if (!transactionId) return { state: "waiting", detail: order.checkout_status };
+
+  let payment: string;
+  try {
+    payment = (await client.checkout.getCheckoutStatus(transactionId)).checkout_status;
+  } catch {
+    // Some accounts don't answer by transaction id; the order status above covers them.
+    return { state: "waiting", detail: order.checkout_status };
+  }
+  if (isFailed(payment)) return { state: "failed", detail: payment };
+  if (payment !== "FINISHED") return { state: "waiting", detail: payment };
+  if (!confirmedOrders.has(orderId)) {
+    await logged("confirm_order", () => client.checkout.confirmOrder(orderId));
+    confirmedOrders.add(orderId);
+  }
+  markCartChanged();
+  return { state: "placed", detail: "CONFIRMED" };
 }
 
 export async function cancelPayment(transactionId: string): Promise<void> {
