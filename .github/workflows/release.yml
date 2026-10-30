@@ -26,8 +26,9 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Build and publish installers
-        # Publishes straight to the release of the pushed tag instead of a draft.
-        run: npx electron-builder --publish always -c.publish.provider=github -c.publish.releaseType=release
+        # Where and how it publishes is set in package.json ("build.publish"); PowerShell on the
+        # Windows runner would split "-c.publish..." options at the dots.
+        run: npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # No Apple developer certificate: package.json asks for an ad-hoc signature instead.
