@@ -10,6 +10,7 @@ Ein inoffizieller Desktop-Client für den Lebensmittel-Lieferdienst [Picnic](htt
 - Produkte suchen, Details mit Zutaten, Allergenen und Nährwerten ansehen
 - Warenkorb bearbeiten und Lieferfenster wählen
 - Frühere Bestellungen ansehen und mit einem Klick erneut in den Warenkorb legen
+- **Zahlung:** Standard-Zahlungsart, hinterlegte Zahlungsarten und Zahlungsübersicht ansehen (ändern geht nur in der Picnic-App)
 - **Meine Gerichte** (eigene Funktion, nicht von Picnic): Produkte zu Gerichten zusammenstellen und mit einem Klick in den Warenkorb legen. Optional mit Portionen, Makros pro Portion (kcal, Eiweiß, Kohlenhydrate, Fett) und einem Rezept in Markdown. Gerichte entstehen im Editor, aus dem aktuellen Warenkorb oder über „Zu einem Gericht hinzufügen“ in der Produktansicht.
 - **Bestellen:** „Bestellen“ im Warenkorb zeigt Summe, Lieferfenster und Zahlungsart. „Zahlungspflichtig bestellen“ bestellt verbindlich, Picnic bucht über deine hinterlegte Zahlungsart ab. Verlangt sie eine Bestätigung (z. B. 3-D Secure), öffnet sich dafür eine Seite im Browser. Die App wartet und meldet die Bestellung.
 - Claude anbinden: Claude füllt den Warenkorb, die App zeigt die Änderungen sofort an
@@ -95,6 +96,7 @@ Die App muss dafür nicht geöffnet sein, nur einmal angemeldet. Ist sie offen, 
 | `save_dish` | Gericht anlegen oder ändern (aus Produkten oder dem Warenkorb; einzelne Felder wie Makros oder Rezept lassen sich nachtragen) |
 | `add_dish_to_cart` | Alle Produkte eines Gerichts in den Warenkorb, optional mehrfach |
 | `delete_dish` | Gericht löschen |
+| `get_payments` | Standard-Zahlungsart, hinterlegte Zahlungsarten und letzte Zahlungen |
 | `prepare_order` | Zusammenfassung vor dem Bestellen: Summe, Lieferfenster, Zahlungsart, Probleme, Bestätigungscode |
 | `place_order` | Bestellung auslösen und Zahlungsseite öffnen (nur mit Erlaubnis in der App, Bestätigungscode und unter dem Höchstbetrag) |
 | `get_order_status`, `cancel_order` | Prüfen, ob die Zahlung bestätigt ist, oder die Bestellung vorher abbrechen |

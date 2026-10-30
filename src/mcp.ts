@@ -8,11 +8,12 @@ import { z } from "zod";
 import * as checkout from "./core/checkout.js";
 import { describeError } from "./core/client.js";
 import * as dishes from "./core/dishes.js";
+import { paymentOverview } from "./core/payments.js";
 import { loadSettings } from "./core/settings.js";
 import * as shop from "./core/shop.js";
 
 const AMOUNT_KEYS = new Set(["price", "originalPrice", "total", "discount", "depositTotal", "amount", "minimumOrderValue", "estimatedTotal", "orderLimit"]);
-const TIME_KEYS = new Set(["start", "end", "orderBefore", "orderedAt", "expiresAt"]);
+const TIME_KEYS = new Set(["start", "end", "orderBefore", "orderedAt", "expiresAt", "date"]);
 
 const euro = (cents: number) => `${(cents / 100).toFixed(2).replace(".", ",")} €`;
 const berlinTime = new Intl.DateTimeFormat("de-DE", {
@@ -27,7 +28,7 @@ const berlinTime = new Intl.DateTimeFormat("de-DE", {
 /** Prices in euros, times in German local time, and no image URLs, which only cost tokens. */
 function toText(value: unknown): string {
   return JSON.stringify(value, (key, v) => {
-    if (key === "image" || key === "images" || key === "version") return undefined;
+    if (key === "image" || key === "images" || key === "icon" || key === "version") return undefined;
     if (AMOUNT_KEYS.has(key) && typeof v === "number") return euro(v);
     if (TIME_KEYS.has(key) && typeof v === "string" && !Number.isNaN(Date.parse(v))) return berlinTime.format(new Date(v));
     return v;
@@ -411,6 +412,17 @@ function openInBrowser(url: string): boolean {
 
 const ordersOffHint =
   "Bestellen durch Claude ist ausgeschaltet. Der Nutzer kann es im Picnic Desktop Client unter „Mit Claude verbinden“ erlauben oder selbst in der App bestellen.";
+
+server.registerTool(
+  "get_payments",
+  {
+    title: "Zahlung",
+    description:
+      "Zeigt die Standard-Zahlungsart des Picnic-Kontos, die hinterlegten Zahlungsarten und die letzten Zahlungen mit Status. Ändern kann der Nutzer die Zahlungsart nur in der Picnic-App (an der Kasse auswählen).",
+    annotations: readOnly,
+  },
+  tool(async () => paymentOverview(10)),
+);
 
 server.registerTool(
   "prepare_order",

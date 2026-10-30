@@ -22,6 +22,7 @@ const icons = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
   back: '<path d="m15 18-6-6 6-6"/>',
+  card: '<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/>',
   pot: '<path d="M4 10h16v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-5Z"/><path d="M2 10h20M9 6c0-1 1-1.5 1-2.5M14 6c0-1 1-1.5 1-2.5"/>',
 };
 const icon = (name) =>
@@ -374,6 +375,53 @@ const views = {
       return viewHeader(`Ergebnisse für „${query}“`) + `<p class="empty">Nichts gefunden. Versuch es mit einem allgemeineren Begriff, z. B. „Joghurt“ statt einer Marke.</p>`;
     }
     return viewHeader(`Ergebnisse für „${query}“`, subtitle) + grid(result.products);
+  },
+
+  async payments() {
+    const overview = await api("payments");
+    const head = viewHeader("Zahlung", "Womit Picnic deine Bestellungen abbucht. Ändern kannst du das in der Picnic-App.");
+    const current = overview.defaultOption
+      ? `<section class="panel pay-default">
+          ${overview.defaultOption.icon ? `<img src="${esc(overview.defaultOption.icon)}" alt="">` : ""}
+          <div>
+            <span class="pay-label">Standard-Zahlungsart</span>
+            <strong>${esc(overview.defaultOption.name)}</strong>
+            ${overview.defaultOption.account ? `<span class="pay-account">${esc(overview.defaultOption.account)}</span>` : ""}
+          </div>
+        </section>`
+      : `<section class="panel pay-missing">
+          <h2>Keine Standard-Zahlungsart</h2>
+          <p>Ohne Standard-Zahlungsart lehnt Picnic Bestellungen von hier ab. So legst du eine fest: In der Picnic-App zur Kasse gehen, die Zahlungsart auswählen und dann abbrechen. Danach diese Seite neu öffnen.</p>
+        </section>`;
+    const options = overview.options.length
+      ? `<ul class="pay-options">${overview.options
+          .map(
+            (option) => `<li>
+              ${option.icon ? `<img src="${esc(option.icon)}" alt="">` : `<span class="pay-icon-empty"></span>`}
+              <span><strong>${esc(option.name)}</strong>${option.account ? ` <span class="pay-account">${esc(option.account)}</span>` : ""}</span>
+              ${option.isDefault ? `<span class="pay-badge">Standard</span>` : ""}
+            </li>`,
+          )
+          .join("")}</ul>`
+      : `<p class="empty">Bei Picnic ist keine Zahlungsart hinterlegt.</p>`;
+    const records = overview.records.length
+      ? `<div class="orders">${overview.records
+          .map(
+            (r) => `<div class="order-row pay-row">
+              <strong>${esc(dateFormat.format(new Date(r.date)))}</strong>
+              <span>${esc([r.type, r.method].filter(Boolean).join(", "))}</span>
+              <span class="status${r.failed ? " failed" : ""}">${esc(r.status ?? "")}</span>
+              <span class="price">${euro(r.amount)}</span>
+            </div>`,
+          )
+          .join("")}</div>`
+      : `<p class="empty">Noch keine Zahlungen.</p>`;
+    return (
+      head +
+      current +
+      section("Hinterlegt", options + (overview.canAdd.length ? `<p class="hint">In der Picnic-App kannst du außerdem hinzufügen: ${esc(overview.canAdd.join(", "))}.</p>` : "")) +
+      section("Zahlungsübersicht", records)
+    );
   },
 
   async orders() {

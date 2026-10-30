@@ -5,6 +5,7 @@ import * as checkout from "./core/checkout.js";
 import * as auth from "./core/client.js";
 import { claudeSetup, connectClaude } from "./core/claude-setup.js";
 import * as dishes from "./core/dishes.js";
+import { paymentOverview } from "./core/payments.js";
 import { cartVersionFile, type CountryCode } from "./core/session.js";
 import { loadSettings, saveSettings, type Settings } from "./core/settings.js";
 import * as shop from "./core/shop.js";
@@ -65,6 +66,7 @@ const api: Record<string, (...args: any[]) => unknown> = {
     if (!/^https:\/\//.test(String(url))) throw new Error("Ungültige Zahlungsadresse.");
     return shell.openExternal(url);
   },
+  payments: () => paymentOverview(),
   settings: () => loadSettings(),
   saveSettings: (changes: Partial<Settings>) => saveSettings(changes),
   claudeSetup: () => claudeSetup(appRoot),
