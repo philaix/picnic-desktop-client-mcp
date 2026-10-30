@@ -17,7 +17,8 @@ export type OrderSummary = {
   itemCount: number;
   total: number;
   minimumOrderValue: number | null;
-  slot: { start: string | null; end: string | null } | null;
+  /** `suggested`: Picnic proposed the slot; placing the order confirms it. */
+  slot: { start: string | null; end: string | null; suggested: boolean } | null;
   paymentMethod: string | null;
   /** Products Picnic can't deliver; they are left out of the order. */
   unavailable: string[];
@@ -57,7 +58,7 @@ export async function orderSummary(): Promise<OrderSummary> {
     itemCount: cart.totalCount,
     total: cart.total,
     minimumOrderValue: cart.minimumOrderValue,
-    slot: cart.slot ? { start: cart.slot.start, end: cart.slot.end } : null,
+    slot: cart.slot ? { start: cart.slot.start, end: cart.slot.end, suggested: !cart.slot.chosenByUser } : null,
     paymentMethod: method,
     unavailable: cart.items.filter((item) => item.unavailable).map((item) => item.name),
     confirmation: String(cart.version),
@@ -76,12 +77,19 @@ export async function placeOrder(confirmation: string, resolveKey?: string): Pro
   }
   if (!summary.ready) throw new Error(summary.problems.join(" "));
 
+  const cart = await client.cart.getCart();
+  let mts = cart.mts;
+  // Picnic only checks out a slot the user picked (CART_CONFIRM_SLOT); confirm the suggested one the summary showed.
+  if (cart.selectedSlot && !cart.selectedSlot.isExplicitSelection) {
+    mts = (await client.cart.setDeliverySlot(cart.selectedSlot.slotId)).mts;
+    markCartChanged();
+  }
   // The summary listed these as not deliverable, so the user accepted leaving them out.
-  const unavailableIds = (await client.cart.getCart()).items.filter((line) => line.isUnavailable).map((line) => line.productId);
+  const unavailableIds = cart.items.filter((line) => line.isUnavailable).map((line) => line.productId);
   let checkout;
   try {
     checkout = await client.checkout.startCheckout({
-      mts: Number(summary.confirmation),
+      mts,
       resolveKey,
       outOfStockArticleIds: unavailableIds.length ? unavailableIds : undefined,
     });

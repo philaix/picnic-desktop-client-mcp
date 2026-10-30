@@ -417,7 +417,7 @@ server.registerTool(
   {
     title: "Bestellung vorbereiten",
     description:
-      "Prüft, ob der Warenkorb bestellt werden kann: Artikelzahl, Summe, Lieferfenster, Zahlungsart, nicht lieferbare Artikel und Probleme, dazu ein Bestätigungscode für place_order. Zeig dem Nutzer Summe, Lieferfenster und Zahlungsart und frag ausdrücklich, ob bestellt werden soll.",
+      "Prüft, ob der Warenkorb bestellt werden kann: Artikelzahl, Summe, Lieferfenster, Zahlungsart, nicht lieferbare Artikel und Probleme, dazu ein Bestätigungscode für place_order. Zeig dem Nutzer Summe, Lieferfenster und Zahlungsart und frag ausdrücklich, ob bestellt werden soll. Ist slot.suggested true, hat Picnic das Fenster nur vorgeschlagen; sag das dem Nutzer, place_order bestätigt es.",
     annotations: readOnly,
   },
   tool(async () => {

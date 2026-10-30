@@ -722,7 +722,9 @@ async function openCheckout() {
       <h2>Bestellung prüfen</h2>
       <dl class="checkout-facts">
         <div><dt>Artikel</dt><dd>${summary.itemCount}</dd></div>
-        <div><dt>Lieferung</dt><dd>${esc(slot)} <button class="link" data-slots>ändern</button></dd></div>
+        <div><dt>Lieferung</dt><dd>${esc(slot)} <button class="link" data-slots>ändern</button>${
+          summary.slot?.suggested ? `<small class="fact-note">Von Picnic vorgeschlagen, wird mit der Bestellung bestätigt.</small>` : ""
+        }</dd></div>
         <div><dt>Bezahlung</dt><dd>${esc(summary.paymentMethod ?? "deine bei Picnic hinterlegte Zahlungsart")}</dd></div>
       </dl>
       ${summary.unavailable.length ? `<p class="note">Nicht lieferbar, wird weggelassen: ${esc(summary.unavailable.join(", "))}</p>` : ""}

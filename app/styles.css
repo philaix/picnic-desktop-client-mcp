@@ -1803,6 +1803,14 @@ button:disabled {
   font-size: 14px;
 }
 
+.fact-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
 .checkout-problems {
   margin: 0;
   padding: 10px 14px 10px 32px;
