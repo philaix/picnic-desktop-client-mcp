@@ -1,6 +1,6 @@
 # Picnic Desktop Client
 
-Ein inoffizieller Desktop-Client für den Lebensmittel-Lieferdienst [Picnic](https://picnic.app) – für Windows und macOS. Mit eingebautem MCP-Server, damit Claude für dich Produkte suchen und den Warenkorb füllen kann.
+Ein inoffizieller Desktop-Client für den Lebensmittel-Lieferdienst [Picnic](https://picnic.app) – für Windows und macOS. Mit eingebautem MCP-Server, damit Claude für dich Produkte suchen, den Warenkorb füllen und auf Wunsch bestellen kann.
 
 > Kein Produkt von Picnic. Nutzt die inoffizielle, von der Community nachgebaute App-Schnittstelle ([picnic-api](https://github.com/MRVDH/picnic-api)). Picnic kann sie jederzeit ändern.
 
@@ -11,9 +11,14 @@ Ein inoffizieller Desktop-Client für den Lebensmittel-Lieferdienst [Picnic](htt
 - Warenkorb bearbeiten und Lieferfenster wählen
 - Frühere Bestellungen ansehen und mit einem Klick erneut in den Warenkorb legen
 - **Meine Gerichte** (eigene Funktion, nicht von Picnic): Produkte zu Gerichten zusammenstellen und mit einem Klick in den Warenkorb legen. Optional mit Portionen, Makros pro Portion (kcal, Eiweiß, Kohlenhydrate, Fett) und einem Rezept in Markdown. Gerichte entstehen im Editor, aus dem aktuellen Warenkorb oder über „Zu einem Gericht hinzufügen“ in der Produktansicht.
+- **Bestellen:** „Bestellen“ im Warenkorb zeigt Summe, Lieferfenster und Zahlungsart. Nach „Zahlungspflichtig bestellen“ öffnet sich die Zahlungsseite deiner bei Picnic hinterlegten Zahlungsart (z. B. PayPal) im Browser; dort bestätigst du die Zahlung, die App wartet und meldet die Bestellung.
 - Claude anbinden: Claude füllt den Warenkorb, die App zeigt die Änderungen sofort an
 
-**Bestellen und bezahlen** machst du weiterhin selbst in der Picnic-App auf dem Handy. Der Warenkorb ist dort schon gefüllt, weil er zu deinem Konto gehört.
+Bestellen geht weiterhin auch in der Picnic-App auf dem Handy; der Warenkorb ist dort derselbe, weil er zu deinem Konto gehört.
+
+### Bestellen durch Claude
+
+Claude darf nur bestellen, wenn du es in der App unter **Mit Claude verbinden** erlaubst (standardmäßig aus), und nur bis zum dort eingestellten Höchstbetrag (Standard 150 €). Dann läuft es immer so: Claude ruft `prepare_order` auf, zeigt dir Summe, Lieferfenster und Zahlungsart und fragt nach. Erst nach deinem Ja ruft es `place_order` mit dem Bestätigungscode auf. Der Code gilt nur für den Warenkorb in genau diesem Zustand. Die Zahlung bestätigst du selbst auf der Zahlungsseite, die sich im Browser öffnet.
 
 ## Installation
 
@@ -88,8 +93,11 @@ Die App muss dafür nicht geöffnet sein, nur einmal angemeldet. Ist sie offen, 
 | `save_dish` | Gericht anlegen oder ändern (aus Produkten oder dem Warenkorb; einzelne Felder wie Makros oder Rezept lassen sich nachtragen) |
 | `add_dish_to_cart` | Alle Produkte eines Gerichts in den Warenkorb, optional mehrfach |
 | `delete_dish` | Gericht löschen |
+| `prepare_order` | Zusammenfassung vor dem Bestellen: Summe, Lieferfenster, Zahlungsart, Probleme, Bestätigungscode |
+| `place_order` | Bestellung auslösen und Zahlungsseite öffnen (nur mit Erlaubnis in der App, Bestätigungscode und unter dem Höchstbetrag) |
+| `get_order_status`, `cancel_order` | Prüfen, ob die Zahlung bestätigt ist, oder die Bestellung vorher abbrechen |
 
-Bewusst nicht enthalten: Bestellen, Bezahlen und Stornieren.
+Bewusst nicht enthalten: Stornieren bereits bestellter Lieferungen; das geht in der Picnic-App.
 
 ## Entwicklung
 

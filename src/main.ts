@@ -1,10 +1,12 @@
 import { app, BrowserWindow, clipboard, ipcMain, shell } from "electron";
 import { readFileSync, watchFile } from "node:fs";
 import { join } from "node:path";
+import * as checkout from "./core/checkout.js";
 import * as auth from "./core/client.js";
 import { claudeSetup, connectClaude } from "./core/claude-setup.js";
 import * as dishes from "./core/dishes.js";
 import { cartVersionFile, type CountryCode } from "./core/session.js";
+import { loadSettings, saveSettings, type Settings } from "./core/settings.js";
 import * as shop from "./core/shop.js";
 
 const appRoot = app.getAppPath();
@@ -54,6 +56,17 @@ const api: Record<string, (...args: any[]) => unknown> = {
   deleteDish: (id: string) => dishes.deleteDish(id),
   addDishToCart: changingCart((id: string, times?: number) => dishes.addDishToCart(id, times)),
   cartAsDishItems: () => dishes.cartAsDishItems(),
+  orderSummary: () => checkout.orderSummary(),
+  placeOrder: (confirmation: string, resolveKey?: string) => checkout.placeOrder(confirmation, resolveKey),
+  orderStatus: changingCart((transactionId: string) => checkout.orderStatus(transactionId)),
+  cancelPayment: (transactionId: string) => checkout.cancelPayment(transactionId),
+  openPaymentPage: (url: string) => {
+    // Only real payment pages; the renderer never gets to open arbitrary links.
+    if (!/^https:\/\//.test(String(url))) throw new Error("Ungültige Zahlungsadresse.");
+    return shell.openExternal(url);
+  },
+  settings: () => loadSettings(),
+  saveSettings: (changes: Partial<Settings>) => saveSettings(changes),
   claudeSetup: () => claudeSetup(appRoot),
   connectClaude: () => connectClaude(appRoot),
   copy: (text: string) => clipboard.writeText(String(text)),

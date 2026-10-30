@@ -1,15 +1,18 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import * as checkout from "./core/checkout.js";
 import { describeError } from "./core/client.js";
 import * as dishes from "./core/dishes.js";
+import { loadSettings } from "./core/settings.js";
 import * as shop from "./core/shop.js";
 
-const AMOUNT_KEYS = new Set(["price", "originalPrice", "total", "discount", "depositTotal", "amount", "minimumOrderValue", "estimatedTotal"]);
-const TIME_KEYS = new Set(["start", "end", "orderBefore", "orderedAt"]);
+const AMOUNT_KEYS = new Set(["price", "originalPrice", "total", "discount", "depositTotal", "amount", "minimumOrderValue", "estimatedTotal", "orderLimit"]);
+const TIME_KEYS = new Set(["start", "end", "orderBefore", "orderedAt", "expiresAt"]);
 
 const euro = (cents: number) => `${(cents / 100).toFixed(2).replace(".", ",")} €`;
 const berlinTime = new Intl.DateTimeFormat("de-DE", {
@@ -24,7 +27,7 @@ const berlinTime = new Intl.DateTimeFormat("de-DE", {
 /** Prices in euros, times in German local time, and no image URLs, which only cost tokens. */
 function toText(value: unknown): string {
   return JSON.stringify(value, (key, v) => {
-    if (key === "image" || key === "images") return undefined;
+    if (key === "image" || key === "images" || key === "version") return undefined;
     if (AMOUNT_KEYS.has(key) && typeof v === "number") return euro(v);
     if (TIME_KEYS.has(key) && typeof v === "string" && !Number.isNaN(Date.parse(v))) return berlinTime.format(new Date(v));
     return v;
@@ -57,7 +60,8 @@ const server = new McpServer(
     instructions: [
       "Zugriff auf das Picnic-Konto des Nutzers (Online-Supermarkt mit Lieferung).",
       "Du kannst Produkte suchen und durchstöbern, den Warenkorb füllen und ein Lieferfenster wählen.",
-      "Bestellen und bezahlen kann nur der Nutzer selbst in der Picnic-App – sag ihm am Ende, dass der Warenkorb bereitliegt.",
+      "Bestellen geht nur, wenn der Nutzer es im Picnic Desktop Client erlaubt hat, und immer so: prepare_order aufrufen, dem Nutzer Summe, Lieferfenster und Zahlungsart zeigen, seine ausdrückliche Zustimmung abwarten, dann place_order mit dem Bestätigungscode. Die Zahlung bestätigt der Nutzer selbst auf der Zahlungsseite im Browser; danach get_order_status.",
+      "Ohne Erlaubnis oder ohne Zustimmung: sag dem Nutzer, dass der Warenkorb bereitliegt und er in der App bestellen kann.",
       "Wenn ein Produkt mehrdeutig ist (Marke, Größe, Bio), nimm bevorzugt Produkte mit boughtBefore=true oder frag nach.",
       "'Meine Gerichte' sind eigene Zusammenstellungen des Nutzers (Produkte, optional Portionen, Makros pro Portion und ein Rezept in Markdown); sie liegen nur auf diesem Gerät.",
       "Wenn die Anmeldung fehlt oder abgelaufen ist, bitte den Nutzer, sich im Picnic Desktop Client anzumelden.",
@@ -385,6 +389,110 @@ server.registerTool(
   tool(async ({ dish }: { dish: string }) => {
     dishes.deleteDish(dish);
     return { deleted: dish };
+  }),
+);
+
+/** Opens the payment page in the user's browser, where they approve the payment themselves. */
+function openInBrowser(url: string): boolean {
+  if (!/^https:\/\//.test(url)) return false;
+  const [command, args] =
+    process.platform === "win32"
+      ? ["rundll32", ["url.dll,FileProtocolHandler", url]]
+      : process.platform === "darwin"
+        ? ["open", [url]]
+        : ["xdg-open", [url]];
+  try {
+    spawn(command, args, { detached: true, stdio: "ignore", windowsHide: true }).unref();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const ordersOffHint =
+  "Bestellen durch Claude ist ausgeschaltet. Der Nutzer kann es im Picnic Desktop Client unter „Mit Claude verbinden“ erlauben oder selbst in der App bestellen.";
+
+server.registerTool(
+  "prepare_order",
+  {
+    title: "Bestellung vorbereiten",
+    description:
+      "Prüft, ob der Warenkorb bestellt werden kann: Artikelzahl, Summe, Lieferfenster, Zahlungsart, nicht lieferbare Artikel und Probleme, dazu ein Bestätigungscode für place_order. Zeig dem Nutzer Summe, Lieferfenster und Zahlungsart und frag ausdrücklich, ob bestellt werden soll.",
+    annotations: readOnly,
+  },
+  tool(async () => {
+    const settings = loadSettings();
+    return {
+      ...(await checkout.orderSummary()),
+      claudeMayOrder: settings.claudeMayOrder,
+      orderLimit: settings.claudeOrderLimit,
+      ...(!settings.claudeMayOrder && { note: ordersOffHint }),
+    };
+  }),
+);
+
+server.registerTool(
+  "place_order",
+  {
+    title: "Bestellung auslösen",
+    description:
+      "Bestellt den Warenkorb. Nur aufrufen, nachdem der Nutzer die Zusammenfassung aus prepare_order ausdrücklich bestätigt hat. Öffnet die Zahlungsseite im Browser des Nutzers; bezahlt ist erst, wenn er dort bestätigt. Danach get_order_status. Meldet Picnic einen Hinweis (z. B. Altersprüfung), zeig ihn dem Nutzer und ruf nach seiner Zustimmung erneut mit resolve_key auf.",
+    inputSchema: {
+      confirmation: z.string().describe("Bestätigungscode aus prepare_order"),
+      resolve_key: z.string().optional().describe("Aus einem Hinweis, dem der Nutzer zugestimmt hat"),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+  },
+  tool(async ({ confirmation, resolve_key }: { confirmation: string; resolve_key?: string }) => {
+    const settings = loadSettings();
+    if (!settings.claudeMayOrder) throw new Error(ordersOffHint);
+    const summary = await checkout.orderSummary();
+    if (summary.total > settings.claudeOrderLimit) {
+      throw new Error(
+        `Die Bestellung über ${euro(summary.total)} liegt über dem erlaubten Höchstbetrag von ${euro(settings.claudeOrderLimit)}. Der Nutzer kann den Betrag in der App erhöhen oder selbst bestellen.`,
+      );
+    }
+    const result = await checkout.placeOrder(confirmation, resolve_key);
+    if (result.status === "issue") {
+      return { ...result, next: "Zeig dem Nutzer den Hinweis. Stimmt er zu und ist blocking=false, place_order mit resolve_key erneut aufrufen." };
+    }
+    return {
+      ...result,
+      paymentPageOpened: result.paymentUrl ? openInBrowser(result.paymentUrl) : false,
+      next: result.paymentUrl
+        ? "Der Nutzer bestätigt jetzt die Zahlung auf der Zahlungsseite (paymentUrl, im Browser geöffnet). Danach get_order_status mit transactionId."
+        : "get_order_status mit transactionId aufrufen.",
+    };
+  }),
+);
+
+server.registerTool(
+  "get_order_status",
+  {
+    title: "Bestellstatus",
+    description: "Prüft, ob die Zahlung einer mit place_order gestarteten Bestellung bestätigt und die Bestellung angenommen ist.",
+    inputSchema: { transaction_id: z.string().describe("transactionId aus place_order") },
+    annotations: readOnly,
+  },
+  tool(async ({ transaction_id }: { transaction_id: string }) => {
+    const status = await checkout.orderStatus(transaction_id);
+    if (status.state !== "placed") return status;
+    const [delivery] = await shop.deliveries(1);
+    return { ...status, delivery };
+  }),
+);
+
+server.registerTool(
+  "cancel_order",
+  {
+    title: "Bestellung abbrechen",
+    description: "Bricht eine mit place_order gestartete Bestellung ab, solange die Zahlung noch nicht bestätigt ist.",
+    inputSchema: { transaction_id: z.string().describe("transactionId aus place_order") },
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
+  },
+  tool(async ({ transaction_id }: { transaction_id: string }) => {
+    await checkout.cancelPayment(transaction_id);
+    return { cancelled: true };
   }),
 );
 

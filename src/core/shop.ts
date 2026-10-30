@@ -54,6 +54,8 @@ export type CartItem = {
 };
 
 export type CartView = {
+  /** The cart's modification timestamp (`mts`); checkout only works for the cart in this state. */
+  version: number;
   items: CartItem[];
   totalCount: number;
   total: number;
@@ -118,6 +120,7 @@ function toCartItem(line: CartLineItem): CartItem {
 
 function toCartView(cart: RawCart): CartView {
   return {
+    version: cart.mts,
     items: cart.items.map(toCartItem),
     totalCount: cart.totalCount,
     total: cart.totalPrice,

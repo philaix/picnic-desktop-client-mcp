@@ -419,7 +419,7 @@ const views = {
   },
 
   async claude() {
-    const setup = await api("claudeSetup");
+    const [setup, settings] = await Promise.all([api("claudeSetup"), api("settings")]);
     state.copies = [setup.claudeCodeCommand, setup.desktopJson];
     return (
       viewHeader("Mit Claude verbinden", "Dann kann Claude für dich Produkte suchen und den Warenkorb füllen. Bestellen tust du weiterhin selbst.") +
@@ -434,6 +434,12 @@ const views = {
           }</li>
         </ul>
         <button class="primary" data-connect-claude>${setup.inDesktop && (setup.inCode || !setup.claudeCodeFound) ? "Erneut verbinden" : "Mit Claude verbinden"}</button>
+      </section>
+      <section class="panel">
+        <h2>Bestellen durch Claude</h2>
+        <p>Claude kann den Warenkorb immer füllen. Bestellungen auslösen darf Claude nur, wenn du es hier erlaubst. Vorher zeigt Claude dir Summe und Lieferfenster und fragt nach, und die Zahlung bestätigst du selbst auf der Zahlungsseite.</p>
+        <label class="toggle"><input type="checkbox" data-setting="claudeMayOrder"${settings.claudeMayOrder ? " checked" : ""}> Claude darf Bestellungen auslösen</label>
+        <label class="field limit-field">Höchstbetrag pro Bestellung in Euro<input type="number" min="1" step="1" data-setting="claudeOrderLimit" value="${Math.round(settings.claudeOrderLimit / 100)}"></label>
       </section>
       <section class="panel">
         <h2>Danach</h2>
@@ -460,6 +466,7 @@ const views = {
           <li>„Leg meine letzte Bestellung nochmal in den Warenkorb, aber ohne Getränke.“</li>
           <li>„Welche Angebote gibt es diese Woche bei Milchprodukten?“</li>
           <li>„Such mir ein Lieferfenster am Freitagabend aus.“</li>
+          <li>„Bestell den Warenkorb.“ (wenn oben erlaubt)</li>
         </ul>
       </section>`
     );
@@ -563,7 +570,14 @@ function renderCart() {
     <div class="totals">${rows.join("")}<div class="sum"><span>Summe</span><strong>${euro(cart.total)}</strong></div></div>
     ${mov}
     <div class="receipt-foot">
-      <p>Bestellen und bezahlen kannst du in der Picnic-App – der Warenkorb ist dort schon gefüllt.</p>
+      ${cart.items.length ? `<button class="primary order-btn" data-checkout${missing > 0 ? " disabled" : ""}>Bestellen</button>` : ""}
+      <p>${
+        !cart.items.length
+          ? "Bestellen kannst du hier oder wie gewohnt in der Picnic-App."
+          : missing > 0
+            ? "Bestellen geht ab dem Mindestbestellwert."
+            : "Oder wie gewohnt in der Picnic-App, der Warenkorb ist dort schon gefüllt."
+      }</p>
       ${
         cart.items.length
           ? `<div class="receipt-links"><button class="link" data-dish-save-cart>Als Gericht speichern</button><button class="link danger" data-clear>Warenkorb leeren</button></div>`
@@ -685,6 +699,122 @@ async function openSlots() {
   } catch (error) {
     openModal(`<p class="error-block">${esc(error.message)}</p>`, true);
   }
+}
+
+// ---------- Checkout ----------
+
+/** The payment in progress; polling stops when it is cleared. */
+const payment = { transactionId: null, paymentUrl: null, expiresAt: null, timer: null };
+
+function checkoutModal(html) {
+  openModal(`<div class="checkout">${html}</div>`, true);
+}
+
+async function openCheckout() {
+  checkoutModal(`<p class="loading">Lädt …</p>`);
+  try {
+    const summary = await api("orderSummary");
+    state.orderConfirmation = summary.confirmation;
+    const slot = summary.slot?.start
+      ? `${shortDayFormat.format(new Date(summary.slot.start))}, ${timeRange(summary.slot.start, summary.slot.end)}`
+      : "noch keins gewählt";
+    checkoutModal(`
+      <h2>Bestellung prüfen</h2>
+      <dl class="checkout-facts">
+        <div><dt>Artikel</dt><dd>${summary.itemCount}</dd></div>
+        <div><dt>Lieferung</dt><dd>${esc(slot)} <button class="link" data-slots>ändern</button></dd></div>
+        <div><dt>Bezahlung</dt><dd>${esc(summary.paymentMethod ?? "deine bei Picnic hinterlegte Zahlungsart")}</dd></div>
+      </dl>
+      ${summary.unavailable.length ? `<p class="note">Nicht lieferbar, wird weggelassen: ${esc(summary.unavailable.join(", "))}</p>` : ""}
+      ${summary.problems.length ? `<ul class="checkout-problems">${summary.problems.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
+      <div class="checkout-total"><span>Gesamt</span><strong>${euro(summary.total)}</strong></div>
+      <button class="primary order-now" data-place-order${summary.ready ? "" : " disabled"}>Zahlungspflichtig bestellen</button>
+      <p class="hint">Danach öffnet sich die Zahlungsseite im Browser, zum Beispiel PayPal. Dort bestätigst du die Zahlung.</p>`);
+  } catch (error) {
+    checkoutModal(`<p class="error-block">${esc(error.message)}</p>`);
+  }
+}
+
+async function placeOrder(resolveKey) {
+  checkoutModal(`<h2>Bestellung wird angelegt</h2><p class="checkout-wait"><span class="spinner"></span>Einen Moment …</p>`);
+  try {
+    const result = await api("placeOrder", state.orderConfirmation, resolveKey);
+    if (result.status === "issue") {
+      const { issue } = result;
+      return checkoutModal(`
+        <h2>${esc(issue.title || "Bitte bestätigen")}</h2>
+        <p>${esc(issue.message)}</p>
+        <div class="dish-buttons">
+          ${!issue.blocking && issue.resolveKey ? `<button class="primary" data-resolve-issue="${esc(issue.resolveKey)}">Bestätigen und weiter</button>` : ""}
+          <button class="secondary" data-close>Abbrechen</button>
+        </div>`);
+    }
+    Object.assign(payment, { transactionId: result.transactionId, paymentUrl: result.paymentUrl, expiresAt: result.expiresAt });
+    if (result.paymentUrl) api("openPaymentPage", result.paymentUrl).catch((error) => toast(error.message, "error"));
+    checkoutModal(`
+      <h2>Zahlung bestätigen</h2>
+      <p>${result.paymentUrl ? "Im Browser ist die Zahlungsseite offen. Bestätige dort die Zahlung, danach geht es hier von allein weiter." : "Picnic verarbeitet die Zahlung."}</p>
+      <div class="checkout-total"><span>Betrag</span><strong>${euro(result.total)}</strong></div>
+      <p class="checkout-wait"><span class="spinner"></span>Warte auf die Bestätigung von Picnic …</p>
+      <div class="dish-buttons">
+        ${result.paymentUrl ? `<button class="secondary" data-open-payment>Zahlungsseite erneut öffnen</button>` : ""}
+        <button class="link danger" data-cancel-payment>Bestellung abbrechen</button>
+      </div>`);
+    pollPayment();
+  } catch (error) {
+    checkoutModal(`<h2>Das hat nicht geklappt</h2><p class="error-block">${esc(error.message)}</p><button class="secondary" data-checkout>Erneut prüfen</button>`);
+  }
+}
+
+function pollPayment() {
+  clearTimeout(payment.timer);
+  const transactionId = payment.transactionId;
+  if (!transactionId) return;
+  payment.timer = setTimeout(async () => {
+    if (payment.transactionId !== transactionId) return;
+    if (payment.expiresAt && Date.now() > Date.parse(payment.expiresAt) + 60_000) {
+      payment.transactionId = null;
+      return checkoutModal(`<h2>Zeit abgelaufen</h2><p>Die Zahlung wurde nicht rechtzeitig bestätigt. Der Warenkorb ist unverändert, du kannst es erneut versuchen.</p><button class="secondary" data-checkout>Erneut prüfen</button>`);
+    }
+    try {
+      const status = await api("orderStatus", transactionId);
+      if (payment.transactionId !== transactionId) return;
+      if (status.state === "placed") return finishOrder();
+      if (status.state === "failed") {
+        payment.transactionId = null;
+        return checkoutModal(`<h2>Nicht bezahlt</h2><p>Die Zahlung wurde nicht abgeschlossen (${esc(status.detail)}). Es wurde nichts bestellt.</p><button class="secondary" data-checkout>Erneut prüfen</button>`);
+      }
+    } catch {
+      // A failed status check is retried on the next round.
+    }
+    pollPayment();
+  }, 3000);
+}
+
+async function finishOrder() {
+  payment.transactionId = null;
+  cartTask(() => api("cart"));
+  const [latest] = await api("deliveries", 1).catch(() => []);
+  const when = latest?.start ? `${dateFormat.format(new Date(latest.start))}, ${timeRange(latest.start, latest.end)}` : null;
+  checkoutModal(`
+    <h2>Bestellt</h2>
+    <p>${when ? `Picnic liefert ${esc(when)}.` : "Picnic hat die Bestellung angenommen."}</p>
+    <button class="primary" data-nav="orders">Zu meinen Bestellungen</button>`);
+  toast("Bestellung abgeschlossen");
+}
+
+async function cancelPayment() {
+  const transactionId = payment.transactionId;
+  payment.transactionId = null;
+  clearTimeout(payment.timer);
+  if (!transactionId) return closeModal();
+  try {
+    await api("cancelPayment", transactionId);
+    toast("Bestellung abgebrochen, es wurde nichts bestellt");
+  } catch (error) {
+    toast(error.message, "error");
+  }
+  closeModal();
 }
 
 // ---------- Dishes ----------
@@ -989,7 +1119,15 @@ document.addEventListener("click", (event) => {
     return;
   }
   const d = target.dataset;
-  if (d.nav) return go(d.nav, {}, { reset: true });
+  if (d.nav) {
+    if (!modal.hidden) closeModal();
+    return go(d.nav, {}, { reset: true });
+  }
+  if (d.checkout !== undefined) return openCheckout();
+  if (d.placeOrder !== undefined) return placeOrder();
+  if (d.resolveIssue) return placeOrder(d.resolveIssue);
+  if (d.openPayment !== undefined) return payment.paymentUrl && api("openPaymentPage", payment.paymentUrl);
+  if (d.cancelPayment !== undefined) return cancelPayment();
   if (d.back !== undefined) return back();
   if (d.inc) return changeQuantity(d.inc, 1);
   if (d.dec) return changeQuantity(d.dec, -1);
@@ -1113,6 +1251,24 @@ document.addEventListener("click", (event) => {
     state.editor.items = cartItemsForDish();
     return renderEditorLines();
   }
+});
+
+// Settings on the "Mit Claude verbinden" page save as soon as they change.
+document.addEventListener("change", (event) => {
+  const key = event.target.dataset?.setting;
+  if (!key) return;
+  const value = key === "claudeMayOrder" ? event.target.checked : Math.round(Number(event.target.value) * 100);
+  api("saveSettings", { [key]: value })
+    .then((settings) =>
+      toast(
+        key === "claudeMayOrder"
+          ? settings.claudeMayOrder
+            ? "Claude darf jetzt Bestellungen auslösen"
+            : "Claude darf keine Bestellungen mehr auslösen"
+          : `Höchstbetrag: ${euro(settings.claudeOrderLimit)}`,
+      ),
+    )
+    .catch((error) => toast(error.message, "error"));
 });
 
 document.addEventListener("submit", (event) => {

@@ -1750,6 +1750,144 @@ button:disabled {
   gap: 12px;
 }
 
+/* Checkout */
+
+.order-btn {
+  width: 100%;
+  height: 46px;
+  margin-bottom: 10px;
+  border-radius: 23px;
+  font-size: 16px;
+}
+
+.checkout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 520px;
+}
+
+.checkout h2 {
+  font-size: 28px;
+}
+
+.checkout > p {
+  margin: 0;
+}
+
+.checkout-facts {
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+
+.checkout-facts div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.checkout-facts dt {
+  color: var(--muted);
+}
+
+.checkout-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.checkout-facts .link {
+  margin-left: 8px;
+  font-weight: 400;
+  font-size: 14px;
+}
+
+.checkout-problems {
+  margin: 0;
+  padding: 10px 14px 10px 32px;
+  border-radius: 8px;
+  background: #f8e8e4;
+  color: var(--danger);
+}
+
+.checkout-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: 4px;
+}
+
+.checkout-total span {
+  font: 600 17px var(--display);
+}
+
+.checkout-total strong {
+  font: 700 36px/1 var(--display);
+  font-variant-numeric: tabular-nums;
+}
+
+.order-now {
+  height: 48px;
+  font-size: 16px;
+}
+
+.checkout-wait {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: 2.5px solid var(--aubergine-soft);
+  border-top-color: var(--aubergine);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 3s;
+  }
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--aubergine);
+}
+
+.limit-field {
+  max-width: 260px;
+}
+
+.limit-field input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  font-weight: 400;
+}
+
 /* Toasts */
 
 .toasts {
