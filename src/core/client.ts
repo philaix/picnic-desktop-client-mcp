@@ -3,7 +3,7 @@ import { loadSession, saveSession, type CountryCode } from "./session.js";
 
 export class NotLoggedInError extends Error {
   constructor() {
-    super("Nicht bei Picnic angemeldet. Bitte den Picnic Desktop Client öffnen und dort anmelden.");
+    super("Nicht bei Picnic angemeldet. Bitte den Desktop-Client für Picnic öffnen und dort anmelden.");
   }
 }
 
@@ -93,7 +93,7 @@ export function describeError(error: unknown): string {
       return "Picnic hat die Zahlung abgelehnt. Meist fehlt eine Standard-Zahlungsart: Öffne in der Picnic-App einmal die Kasse, wähle deine Zahlungsart aus und brich dann ab. Danach erneut bestellen.";
     if (error.code === "CART_CONFIRM_SLOT") return "Picnic möchte, dass du das Lieferfenster bestätigst. Bitte ein Lieferfenster auswählen und erneut bestellen.";
     if (error.status === 401)
-      return "Die Picnic-Anmeldung ist abgelaufen. Bitte im Picnic Desktop Client neu anmelden.";
+      return "Die Picnic-Anmeldung ist abgelaufen. Bitte im Desktop-Client für Picnic neu anmelden.";
     if (error.status === 403 && !error.code)
       return "Picnic blockiert gerade zu viele Anfragen. Bitte kurz warten und es dann erneut versuchen.";
     const picnicText = error.message && !error.message.startsWith(String(error.status)) ? `: ${error.message}` : ".";

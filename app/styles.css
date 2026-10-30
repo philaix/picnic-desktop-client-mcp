@@ -1329,6 +1329,12 @@ button:disabled {
   font-size: 14px;
 }
 
+.login-card .login-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
 .login-links {
   display: flex;
   justify-content: space-between;

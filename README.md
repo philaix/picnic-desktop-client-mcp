@@ -1,8 +1,13 @@
-# Picnic Desktop Client
+# Desktop-Client für Picnic
 
-Ein inoffizieller Desktop-Client für den Lebensmittel-Lieferdienst [Picnic](https://picnic.app) – für Windows und macOS. Mit eingebautem MCP-Server, damit Claude für dich Produkte suchen, den Warenkorb füllen und auf Wunsch bestellen kann.
+Ein inoffizieller Desktop-Client für den Lebensmittel-Lieferdienst [Picnic](https://picnic.app), für Windows und macOS. Mit eingebautem MCP-Server, damit Claude für dich Produkte suchen, den Warenkorb füllen und auf Wunsch bestellen kann.
 
-> Kein Produkt von Picnic. Nutzt die inoffizielle, von der Community nachgebaute App-Schnittstelle ([picnic-api](https://github.com/MRVDH/picnic-api)). Picnic kann sie jederzeit ändern.
+> **Inoffiziell und auf eigenes Risiko.** Dieses Projekt ist nicht mit Picnic verbunden und wird von Picnic weder unterstützt noch geprüft. „Picnic“ ist eine Marke der Picnic Technologies B.V. und steht hier nur, um zu beschreiben, wofür die App gedacht ist.
+>
+> - Die App nutzt eine inoffizielle, von der Community nachgebaute Schnittstelle der Picnic-App ([picnic-api](https://github.com/MRVDH/picnic-api)). Picnic kann sie jederzeit ändern oder sperren.
+> - Picnics Nutzungsbedingungen untersagen automatisierten Zugriff. Die Nutzung kann dazu führen, dass Picnic dein Konto einschränkt oder sperrt.
+> - Bestellungen über die App oder über Claude sind verbindlich und werden über deine bei Picnic hinterlegte Zahlungsart abgebucht. Prüf Warenkorb, Lieferfenster und Summe vor jeder Bestellung.
+> - Die Software wird ohne Gewähr bereitgestellt (MIT-Lizenz). Du nutzt sie auf eigene Verantwortung.
 
 ## Was die App kann
 
@@ -29,9 +34,11 @@ Lade die passende Datei unter [Releases](../../releases) herunter:
 
 | System | Datei |
 | --- | --- |
-| Windows | `Picnic Desktop Client Setup x.y.z.exe` |
-| Mac mit Apple-Chip (M1 bis M4) | `Picnic Desktop Client-x.y.z-arm64.dmg` |
-| Mac mit Intel-Chip | `Picnic Desktop Client-x.y.z.dmg` |
+| Windows | `Desktop-Client-fuer-Picnic-Setup-x.y.z.exe` |
+| Mac mit Apple-Chip (M1 bis M4) | `Desktop-Client-fuer-Picnic-x.y.z-arm64.dmg` |
+| Mac mit Intel-Chip | `Desktop-Client-fuer-Picnic-x.y.z-x64.dmg` |
+
+Bis Version 0.2.0 hieß die App „Picnic Desktop Client“. Nach dem Umstieg einmal in der App auf **Mit Claude verbinden** klicken, weil sich der Programmordner geändert haben kann.
 
 **Windows:** Die Installationsdatei ist nicht signiert. Wenn SmartScreen warnt: „Weitere Informationen“, dann „Trotzdem ausführen“.
 
@@ -41,7 +48,7 @@ Lade die passende Datei unter [Releases](../../releases) herunter:
 2. Einmal im Terminal ausführen, damit macOS die Download-Sperre aufhebt:
 
    ```bash
-   xattr -cr "/Applications/Picnic Desktop Client.app"
+   xattr -cr "/Applications/Desktop-Client für Picnic.app"
    ```
 
 3. App ganz normal öffnen.

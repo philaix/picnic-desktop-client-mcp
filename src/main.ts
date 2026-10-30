@@ -89,7 +89,7 @@ function createWindow() {
     height: 880,
     minWidth: 1040,
     minHeight: 640,
-    title: "Picnic Desktop Client",
+    title: "Desktop-Client für Picnic",
     icon: join(appRoot, "app", "icon.png"),
     backgroundColor: "#F1F3EE",
     autoHideMenuBar: true,

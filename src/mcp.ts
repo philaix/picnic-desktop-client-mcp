@@ -66,16 +66,16 @@ function appIcons() {
 }
 
 const server = new McpServer(
-  { name: "picnic", title: "Picnic", version: appVersion(), icons: appIcons() },
+  { name: "picnic", title: "Desktop-Client für Picnic", version: appVersion(), icons: appIcons() },
   {
     instructions: [
       "Zugriff auf das Picnic-Konto des Nutzers (Online-Supermarkt mit Lieferung).",
       "Du kannst Produkte suchen und durchstöbern, den Warenkorb füllen und ein Lieferfenster wählen.",
-      "Bestellen geht nur, wenn der Nutzer es im Picnic Desktop Client erlaubt hat, und immer so: prepare_order aufrufen, dem Nutzer Summe, Lieferfenster und Zahlungsart zeigen, seine ausdrückliche Zustimmung abwarten, dann place_order mit dem Bestätigungscode. place_order ist verbindlich: Picnic bucht sofort über die hinterlegte Zahlungsart ab; nur wenn sie eine Bestätigung verlangt (z. B. 3-D Secure), öffnet sich eine Seite im Browser. Danach get_order_status.",
+      "Bestellen geht nur, wenn der Nutzer es im Desktop-Client für Picnic erlaubt hat, und immer so: prepare_order aufrufen, dem Nutzer Summe, Lieferfenster und Zahlungsart zeigen, seine ausdrückliche Zustimmung abwarten, dann place_order mit dem Bestätigungscode. place_order ist verbindlich: Picnic bucht sofort über die hinterlegte Zahlungsart ab; nur wenn sie eine Bestätigung verlangt (z. B. 3-D Secure), öffnet sich eine Seite im Browser. Danach get_order_status.",
       "Ohne Erlaubnis oder ohne Zustimmung: sag dem Nutzer, dass der Warenkorb bereitliegt und er in der App bestellen kann.",
       "Wenn ein Produkt mehrdeutig ist (Marke, Größe, Bio), nimm bevorzugt Produkte mit boughtBefore=true oder frag nach.",
       "'Meine Gerichte' sind eigene Zusammenstellungen des Nutzers (Produkte, optional Portionen, Makros pro Portion und ein Rezept in Markdown); sie liegen nur auf diesem Gerät.",
-      "Wenn die Anmeldung fehlt oder abgelaufen ist, bitte den Nutzer, sich im Picnic Desktop Client anzumelden.",
+      "Wenn die Anmeldung fehlt oder abgelaufen ist, bitte den Nutzer, sich im Desktop-Client für Picnic anzumelden.",
     ].join(" "),
   },
 );
@@ -87,7 +87,7 @@ server.registerTool(
   "picnic_status",
   {
     title: "Anmeldestatus",
-    description: "Zeigt, ob und mit welchem Konto der Picnic Desktop Client angemeldet ist.",
+    description: "Zeigt, ob und mit welchem Konto der Desktop-Client für Picnic angemeldet ist.",
     annotations: readOnly,
   },
   tool(async () => shop.status()),
@@ -421,7 +421,7 @@ function openInBrowser(url: string): boolean {
 }
 
 const ordersOffHint =
-  "Bestellen durch Claude ist ausgeschaltet. Der Nutzer kann es im Picnic Desktop Client unter „Mit Claude verbinden“ erlauben oder selbst in der App bestellen.";
+  "Bestellen durch Claude ist ausgeschaltet. Der Nutzer kann es im Desktop-Client für Picnic unter „Mit Claude verbinden“ erlauben oder selbst in der App bestellen.";
 
 server.registerTool(
   "get_payments",

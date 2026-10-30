@@ -1,11 +1,11 @@
 {
   "name": "picnic-desktop-client-mcp",
-  "productName": "Picnic Desktop Client",
+  "productName": "Desktop-Client für Picnic",
   "version": "0.2.0",
   "description": "Inoffizieller Desktop-Client für den Lieferdienst Picnic – mit MCP-Server, damit Claude den Warenkorb füllen und bestellen kann",
   "type": "module",
   "main": "dist/main.js",
-  "author": "Philipp Kremer",
+  "author": "philaix",
   "license": "MIT",
   "repository": "github:philaix/picnic-desktop-client-mcp",
   "scripts": {
@@ -30,7 +30,8 @@
   },
   "build": {
     "appId": "io.github.picnic-desktop-client",
-    "productName": "Picnic Desktop Client",
+    "productName": "Desktop-Client für Picnic",
+    "artifactName": "Desktop-Client-fuer-Picnic-${version}-${arch}.${ext}",
     "asar": false,
     "files": [
       "dist/**/*",
@@ -47,7 +48,8 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Desktop-Client-fuer-Picnic-Setup-${version}.${ext}"
     },
     "mac": {
       "category": "public.app-category.shopping",
