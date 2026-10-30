@@ -26,7 +26,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        # The Mac build runs on Intel: arm64 runners (macos-latest) often wait long for capacity,
+        # and electron-builder makes both the arm64 and the x64 .dmg from either.
+        os: [windows-latest, macos-15-intel]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
