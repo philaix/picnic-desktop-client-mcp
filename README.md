@@ -110,11 +110,11 @@ npm run dist
 Einen Mac-Installer kann man nur auf einem Mac bauen. Das übernimmt der GitHub-Workflow: Ein Versions-Tag pushen, und GitHub baut die Windows- und Mac-Installer und hängt sie an ein Release.
 
 ```bash
-git tag v0.1.0
+git tag v0.1.1
 ```
 
 ```bash
-git push origin v0.1.0
+git push origin v0.1.1
 ```
 
 ### Aufbau

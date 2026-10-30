@@ -1,17 +1,28 @@
 # Builds the Windows and macOS installers and attaches them to a GitHub release.
-# Start it by pushing a version tag:  git tag v0.1.0 && git push origin v0.1.0
+# Start it by pushing a version tag:  git tag v0.1.1 && git push origin v0.1.1
 name: Release
 
 on:
   push:
     tags: ["v*"]
-  workflow_dispatch:
 
 permissions:
   contents: write
 
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  TAG: ${{ github.ref_name }}
+  REPO: ${{ github.repository }}
+
 jobs:
+  # One draft up front: without it, the Windows and macOS builds each create their own release.
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release create "$TAG" --repo "$REPO" --draft --title "${TAG#v}" --notes "Installer für Windows (.exe) und macOS (.dmg, Apple-Chip und Intel)." || echo "Release exists already"
+
   build:
+    needs: draft
     strategy:
       fail-fast: false
       matrix:
@@ -25,11 +36,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Build and publish installers
-        # Where and how it publishes is set in package.json ("build.publish"); PowerShell on the
-        # Windows runner would split "-c.publish..." options at the dots.
+      - name: Build and upload installers
+        # Uploads into the draft; where it publishes is set in package.json ("build.publish").
+        # PowerShell on the Windows runner would split "-c.publish..." options at the dots.
         run: npx electron-builder --publish always
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # No Apple developer certificate: package.json asks for an ad-hoc signature instead.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release edit "$TAG" --repo "$REPO" --draft=false
