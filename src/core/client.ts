@@ -94,7 +94,8 @@ export function describeError(error: unknown): string {
       return "Die Picnic-Anmeldung ist abgelaufen. Bitte im Picnic Desktop Client neu anmelden.";
     if (error.status === 403 && !error.code)
       return "Picnic blockiert gerade zu viele Anfragen. Bitte kurz warten und es dann erneut versuchen.";
-    return `Picnic hat mit Fehler ${error.status}${error.code ? ` (${error.code})` : ""} geantwortet.`;
+    const picnicText = error.message && !error.message.startsWith(String(error.status)) ? `: ${error.message}` : ".";
+    return `Picnic hat mit Fehler ${error.status}${error.code ? ` (${error.code})` : ""} geantwortet${picnicText}`;
   }
   if (PicnicClient.isProductNotFoundError(error)) return "Dieses Produkt gibt es nicht oder es ist an deiner Adresse nicht verfügbar.";
   return error instanceof Error ? error.message : String(error);

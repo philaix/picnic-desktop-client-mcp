@@ -1,7 +1,40 @@
 import PicnicClient from "picnic-api";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { getClient } from "./client.js";
-import { markCartChanged } from "./session.js";
+import { dataDir, markCartChanged } from "./session.js";
 import * as shop from "./shop.js";
+
+/**
+ * Keeps Picnic's full answer to a failed checkout step in checkout-error.json, so a refusal can be
+ * understood afterwards (the app only shows a short message).
+ */
+async function logged<T>(step: string, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    try {
+      mkdirSync(dataDir(), { recursive: true });
+      writeFileSync(
+        join(dataDir(), "checkout-error.json"),
+        JSON.stringify(
+          {
+            at: new Date().toISOString(),
+            step,
+            status: PicnicClient.isPicnicApiError(error) ? error.status : null,
+            code: PicnicClient.isPicnicApiError(error) ? error.code : null,
+            body: PicnicClient.isPicnicApiError(error) ? error.body : String(error),
+          },
+          null,
+          2,
+        ),
+      );
+    } catch {
+      // The log is only a diagnosis aid.
+    }
+    throw error;
+  }
+}
 
 // Ordering follows the app: confirm the slot, start the checkout for the cart as it is, start the
 // payment, then poll the order until Picnic reports it done. A stored payment method (PayPal, SEPA)
@@ -84,18 +117,21 @@ export async function placeOrder(confirmation: string, resolveKey?: string): Pro
   let mts = cart.mts;
   // Picnic only checks out a slot the user picked (CART_CONFIRM_SLOT); confirm the suggested one the summary showed.
   if (cart.selectedSlot && !cart.selectedSlot.isExplicitSelection) {
-    mts = (await client.cart.setDeliverySlot(cart.selectedSlot.slotId)).mts;
+    const slotId = cart.selectedSlot.slotId;
+    mts = (await logged("set_delivery_slot", () => client.cart.setDeliverySlot(slotId))).mts;
     markCartChanged();
   }
   // The summary listed these as not deliverable, so the user accepted leaving them out.
   const unavailableIds = cart.items.filter((line) => line.isUnavailable).map((line) => line.productId);
   let checkout;
   try {
-    checkout = await client.checkout.startCheckout({
-      mts,
-      resolveKey,
-      outOfStockArticleIds: unavailableIds.length ? unavailableIds : undefined,
-    });
+    checkout = await logged("checkout_start", () =>
+      client.checkout.startCheckout({
+        mts,
+        resolveKey,
+        outOfStockArticleIds: unavailableIds.length ? unavailableIds : undefined,
+      }),
+    );
   } catch (error) {
     if (PicnicClient.isCheckoutIssueError(error)) {
       return {
@@ -105,7 +141,8 @@ export async function placeOrder(confirmation: string, resolveKey?: string): Pro
     }
     throw error;
   }
-  const payment = await client.checkout.initiatePayment(checkout.order_id, PAYMENT_RETURN_URL);
+  const orderId = checkout.order_id;
+  const payment = await logged("initiate_payment", () => client.checkout.initiatePayment(orderId, PAYMENT_RETURN_URL));
   return {
     status: "payment",
     orderId: checkout.order_id,
