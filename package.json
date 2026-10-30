@@ -51,6 +51,9 @@
       "allowToChangeInstallationDirectory": true,
       "artifactName": "Desktop-Client-fuer-Picnic-Setup-${version}.${ext}"
     },
+    "dmg": {
+      "backgroundColor": "#f1f3ee"
+    },
     "mac": {
       "category": "public.app-category.shopping",
       "target": [
